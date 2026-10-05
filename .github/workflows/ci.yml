@@ -1,0 +1,259 @@
+name: CI
+
+on:
+push:
+branches:
+- main
+pull_request:
+branches:
+- main
+
+permissions:
+contents: read
+
+concurrency:
+group: ci-${{ github.ref }}
+cancel-in-progress: true
+
+jobs:
+
+# --------------------------------------------------
+
+# Backend integration tests
+
+# Uses its own PostgreSQL database.
+
+# --------------------------------------------------
+
+backend-test:
+name: Backend Integration Tests
+runs-on: ubuntu-latest
+timeout-minutes: 20
+
+```
+services:
+  postgres:
+    image: postgres:18
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
+    options: >-
+      --health-cmd="pg_isready -U postgres -d postgres"
+      --health-interval=10s
+      --health-timeout=5s
+      --health-retries=5
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medapp_test_db
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres
+
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v7
+
+  - name: Set up Java
+    uses: actions/setup-java@v6
+    with:
+      distribution: temurin
+      java-version: "22"
+      cache: maven
+
+  - name: Create integration test database
+    working-directory: .
+    env:
+      PGPASSWORD: postgres
+    run: |
+      psql \
+        -h localhost \
+        -U postgres \
+        -d postgres \
+        -c "CREATE DATABASE _db;"
+
+  - name: Run backend integration tests
+    run: |
+      if [ -x ./mvnw ]; then
+        ./mvnw -B test
+      else
+        mvn -B test
+      fi
+```
+
+# --------------------------------------------------
+
+# Frontend build + Playwright E2E
+
+# Uses a DIFFERENT PostgreSQL database.
+
+# --------------------------------------------------
+
+e2e:
+name: Playwright E2E
+runs-on: ubuntu-latest
+timeout-minutes: 40
+
+```
+services:
+  postgres:
+    image: postgres:18
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
+    options: >-
+      --health-cmd="pg_isready -U postgres -d postgres"
+      --health-interval=10s
+      --health-timeout=5s
+      --health-retries=5
+
+env:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres
+
+  NEXT_PUBLIC_API_URL: http://localhost:8080
+
+  # These are needed only if your Playwright tests
+  # read these values from process.env.
+  E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+  E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+  E2E_DOCTOR_EMAIL: ${{ secrets.E2E_DOCTOR_EMAIL }}
+  E2E_DOCTOR_PASSWORD: ${{ secrets.E2E_DOCTOR_PASSWORD }}
+  E2E_ASSISTANT_EMAIL: ${{ secrets.E2E_ASSISTANT_EMAIL }}
+  E2E_ASSISTANT_PASSWORD: ${{ secrets.E2E_ASSISTANT_PASSWORD }}
+  E2E_PATIENT_EMAIL: ${{ secrets.E2E_PATIENT_EMAIL }}
+  E2E_PATIENT_PASSWORD: ${{ secrets.E2E_PATIENT_PASSWORD }}
+
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v7
+
+  # -------------------------
+  # Database
+  # -------------------------
+  - name: Create E2E database
+    env:
+      PGPASSWORD: postgres
+    run: |
+      psql \
+        -h localhost \
+        -U postgres \
+        -d postgres \
+        -c "CREATE DATABASE medapp_e2e_db;"
+
+  # -------------------------
+  # Java / backend
+  # -------------------------
+  - name: Set up Java
+    uses: actions/setup-java@v6
+    with:
+      distribution: temurin
+      java-version: "22"
+      cache: maven
+
+  - name: Build backend
+    working-directory: backend
+    run: |
+      if [ -x ./mvnw ]; then
+        ./mvnw -B -DskipTests package
+      else
+        mvn -B -DskipTests package
+      fi
+
+  - name: Start backend
+    working-directory: backend
+    run: |
+      nohup java -jar target/*.jar > ../backend.log 2>&1 &
+
+  - name: Wait for backend
+    run: |
+      echo "Waiting for Spring Boot..."
+
+      for i in {1..60}; do
+        HTTP_STATUS=$(curl \
+          -s \
+          -o /dev/null \
+          -w "%{http_code}" \
+          http://localhost:8080/v3/api-docs || true)
+
+        if [[ "$HTTP_STATUS" != "000" ]]; then
+          echo "Backend is responding with HTTP $HTTP_STATUS"
+          exit 0
+        fi
+
+        sleep 2
+      done
+
+      echo "Backend did not start in time."
+      cat backend.log
+      exit 1
+
+  # -------------------------
+  # Frontend
+  # -------------------------
+  - name: Set up Node.js
+    uses: actions/setup-node@v7
+    with:
+      node-version: "22"
+      cache: npm
+      cache-dependency-path: frontend/package-lock.json
+
+  - name: Install frontend dependencies
+    working-directory: frontend
+    run: npm ci
+
+  - name: Lint frontend
+    working-directory: frontend
+    run: npm run lint
+
+  - name: Build frontend
+    working-directory: frontend
+    run: npm run build
+
+  # -------------------------
+  # Playwright
+  # -------------------------
+  - name: Install Playwright browsers
+    working-directory: frontend
+    run: npx playwright install --with-deps
+
+  - name: Run Playwright E2E tests
+    working-directory: frontend
+    run: npx playwright test
+
+  # -------------------------
+  # Artifacts
+  # -------------------------
+  - name: Upload Playwright report
+    if: ${{ !cancelled() }}
+    uses: actions/upload-artifact@v5
+    with:
+      name: playwright-report
+      path: frontend/playwright-report/
+      retention-days: 14
+
+  - name: Upload Playwright test results
+    if: ${{ !cancelled() }}
+    uses: actions/upload-artifact@v5
+    with:
+      name: playwright-test-results
+      path: frontend/test-results/
+      retention-days: 14
+
+  - name: Upload backend log
+    if: ${{ failure() }}
+    uses: actions/upload-artifact@v5
+    with:
+      name: backend-log
+      path: backend/backend.log
+      retention-days: 7
+```
