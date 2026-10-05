@@ -1,0 +1,11 @@
+package com.phantom.medapp_backend.auth;
+
+import jakarta.validation.constraints.NotBlank;
+
+public class LoginRequest {
+
+    @NotBlank
+    public String email;
+    @NotBlank
+    public String password;
+}

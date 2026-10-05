@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: medapp-postgres
+
+    environment:
+      POSTGRES_DB: medapp
+      POSTGRES_USER: phantom
+      POSTGRES_PASSWORD: itsgonnabeabanger
+
+    ports:
+      - "5332:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+volumes:
+  postgres_data:
