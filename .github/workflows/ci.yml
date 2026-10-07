@@ -35,7 +35,7 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ${{secrets.YOU_INTEGRATION_TEST_DB_PASSWORD}}
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -47,12 +47,12 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend(springboot)/medapp_backend
+        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
 
     env:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medapp_test_db
+      SPRING_DATASOURCE_URL: ${{ secrets.YOUr_INTEGRATION_TEST_DB_URL }}
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_PASSWORD: ${{ secrets.YOU_INTEGRATION_TEST_DB_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -66,7 +66,7 @@ jobs:
           cache: maven
 
       - name: Create integration test database
-        working-directory: backend(springboot)/medapp_backend
+        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         env:
           PGPASSWORD: postgres
         run: |
@@ -113,11 +113,11 @@ jobs:
           --health-retries=5
 
     env:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
+      SPRING_DATASOURCE_URL: ${{ secrets.YOUR_E2E_DB_URL }}
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_PASSWORD: ${{ secrets.YOU_E2E_DB_PASSWORD }}
 
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_API_URL: ${{ secrets.YOUR_E2E_DB_URL }}
 
       # These are needed only if your Playwright tests
       # read these values from process.env.
@@ -158,7 +158,7 @@ jobs:
           cache: maven
 
       - name: Build backend
-        working-directory: backend(springboot)/medapp_backend
+        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         run: |
           if [ -x ./mvnw ]; then
             ./mvnw -B -DskipTests package
@@ -167,64 +167,49 @@ jobs:
           fi
 
       - name: Start backend
-        working-directory: backend(springboot)/medapp_backend
+        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         run: |
           nohup java -jar target/*.jar > ../backend.log 2>&1 &
 
       - name: Wait for backend
         run: |
           echo "Waiting for Spring Boot..."
-
-          for i in {1..60}; do
-            HTTP_STATUS=$(curl \
-              -s \
-              -o /dev/null \
-              -w "%{http_code}" \
-              http://localhost:8080/v3/api-docs || true)
-
-            if [[ "$HTTP_STATUS" != "000" ]]; then
-              echo "Backend is responding with HTTP $HTTP_STATUS"
-              exit 0
-            fi
-
-            sleep 2
-          done
-
-          echo "Backend did not start in time."
-          cat backend.log
+          echo "===== Backend log ====="
+          if [ -f "$GITHUB_WORKSPACE/backend.log" ]; then
+          cat "$GITHUB_WORKSPACE/backend.log"
+          else
+          echo "Backend log was not created."
+          fi
           exit 1
 
-      # -------------------------
-      # Frontend
-      # -------------------------
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/package-lock.json
 
       - name: Install frontend dependencies
-        working-directory: frontend(next.js)/medapp_frontend
+        working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npm ci
 
       - name: Lint frontend
-        working-directory: frontend(next.js)/medapp_frontend
+        working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npm run lint
 
       - name: Build frontend
-        working-directory: frontend(next.js)/medapp_frontend
+        working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npm run build
 
       # -------------------------
       # Playwright
       # -------------------------
       - name: Install Playwright browsers
-        working-directory: frontend(next.js)/medapp_frontend
+        working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npx playwright install --with-deps
 
       - name: Run Playwright E2E tests
-        working-directory: frontend(next.js)/medapp_frontend
+        working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npx playwright test
 
       # -------------------------
@@ -243,7 +228,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: playwright-test-results
-          path: frontend(next.js)/medapp_frontend/test-results/
+          path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/test-results/
           retention-days: 14
 
       - name: Upload backend log
@@ -251,6 +236,6 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: backend-log
-          path: backend(springboot)/medapp_backend/backend.log
+          path: ${{ vars.YOUR_BACKEND_DIRECTORY }}/backend.log
           retention-days: 7
 
