@@ -17,7 +17,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.phantom.medapp_backend.support.IntegrationTestSupport;
-import com.phantom.medapp_backend.uploads.UploadProperties;
 import com.phantom.medapp_backend.uploads.dto.UploadResponse;
 
 @SpringBootTest

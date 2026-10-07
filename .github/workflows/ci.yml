@@ -77,12 +77,7 @@ jobs:
             -c "CREATE DATABASE medapp_test_db;"
 
       - name: Run backend integration tests
-        run: |
-          if [ -x ./mvnw ]; then
-            ./mvnw -B test
-          else
-            mvn -B test
-          fi
+        run: ./mvnw -Dtest=ApplicationWorkFlowIntegrationTest test
 
 # --------------------------------------------------
 
@@ -119,8 +114,6 @@ jobs:
 
       NEXT_PUBLIC_API_URL: ${{ secrets.YOUR_E2E_DB_URL }}
 
-      # These are needed only if your Playwright tests
-      # read these values from process.env.
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
       E2E_DOCTOR_EMAIL: ${{ secrets.E2E_DOCTOR_EMAIL }}
@@ -134,9 +127,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # -------------------------
-      # Database
-      # -------------------------
       - name: Create E2E database
         env:
           PGPASSWORD: postgres
@@ -146,10 +136,6 @@ jobs:
             -U postgres \
             -d postgres \
             -c "CREATE DATABASE medapp_e2e_db;"
-
-      # -------------------------
-      # Java / backend
-      # -------------------------
       - name: Set up Java
         uses: actions/setup-java@v6
         with:
@@ -157,30 +143,9 @@ jobs:
           java-version: "22"
           cache: maven
 
-      - name: Build backend
+      - name: Start backend Server
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
-        run: |
-          if [ -x ./mvnw ]; then
-            ./mvnw -B -DskipTests package
-          else
-            mvn -B -DskipTests package
-          fi
-
-      - name: Start backend
-        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
-        run: |
-          nohup java -jar target/*.jar > ../backend.log 2>&1 &
-
-      - name: Wait for backend
-        run: |
-          echo "Waiting for Spring Boot..."
-          echo "===== Backend log ====="
-          if [ -f "$GITHUB_WORKSPACE/backend.log" ]; then
-          cat "$GITHUB_WORKSPACE/backend.log"
-          else
-          echo "Backend log was not created."
-          fi
-          exit 1
+        run: ./mvnw spring-boot:run "-Dspring-boot.run.profiles=e2e" "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5332/medapp_e2e" > ../backend.log 2>&1 &
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -238,4 +203,3 @@ jobs:
           name: backend-log
           path: ${{ vars.YOUR_BACKEND_DIRECTORY }}/backend.log
           retention-days: 7
-
