@@ -1,4 +1,4 @@
-package com.phantom.medapp_backend.uplaod;
+package com.phantom.medapp_backend.uploads;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
