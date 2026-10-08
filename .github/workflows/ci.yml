@@ -50,9 +50,14 @@ jobs:
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
 
     env:
-      SPRING_DATASOURCE_URL: ${{ secrets.YOUr_INTEGRATION_TEST_DB_URL }}
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${{ secrets.YOU_INTEGRATION_TEST_DB_PASSWORD }}
+      APP_NAME: MedApp
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/medapp_test_db
+      TEST_DB_USERNAME: postgres
+      TEST_DB_PASSWORD: postgres
+      TEST_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      TEST_JWT_EXPIRATION: 900000
+      TEST_JWT_REFRESH_EXPIRATION: 604800000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
 
     steps:
       - name: Checkout repository
@@ -108,11 +113,14 @@ jobs:
           --health-retries=5
 
     env:
-      SPRING_DATASOURCE_URL: ${{ secrets.YOUR_E2E_DB_URL }}
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${{ secrets.YOU_E2E_DB_PASSWORD }}
-
-      NEXT_PUBLIC_API_URL: ${{ secrets.YOUR_E2E_DB_URL }}
+      APP_NAME: MedApp
+      E2E_DB_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
+      E2E_DB_USERNAME: postgres
+      E2E_DB_PASSWORD: postgres
+      E2E_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      E2E_JWT_EXPIRATION: 900000
+      E2E_JWT_REFRESH_EXPIRATION: 604800000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
 
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
