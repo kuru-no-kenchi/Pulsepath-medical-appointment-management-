@@ -14,7 +14,7 @@ export default function Error({
         </h2>
 
         <p className="mt-2 text-gray-500">
-          We couldn't load this page.
+          We couldn&apos;t load this page.
           Please try again.
         </p>
 

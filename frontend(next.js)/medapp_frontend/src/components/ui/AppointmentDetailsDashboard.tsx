@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   FiArrowLeft,
   FiCalendar,
@@ -28,6 +28,18 @@ interface Props {
   onUpdated: (appointment: Appointment) => void;
 }
 
+function getAppointmentFormData(appointment: Appointment) {
+  return {
+    doctorId: appointment.doctor.id,
+    assistantId: appointment.assistant?.id ?? "",
+    patientId: appointment.patient.id,
+    appointmentDate: appointment.appointmentDate,
+    startTime: appointment.startTime,
+    reason: appointment.reason ?? "",
+    status: appointment.status,
+  };
+}
+
 export default function AppointmentDetailsPage({
   appointment,
   onBack,
@@ -40,28 +52,16 @@ export default function AppointmentDetailsPage({
   const { data: appointments = [] } = useAppoinmentsByAdmin();
   const { updateAppointment } = useAppointmentsByAdminMutations();
   const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    doctorId: appointment.doctor.id,
-    assistantId: appointment.assistant?.id ?? "",
-    patientId: appointment.patient.id,
-    appointmentDate: appointment.appointmentDate,
-    startTime: appointment.startTime,
-    reason: appointment.reason ?? "",
-    status: appointment.status,
-  });
-  const saving = updateAppointment.isPending;
+  const [formOverride, setFormOverride] = useState<{
+    appointment: Appointment;
+    values: ReturnType<typeof getAppointmentFormData>;
+  } | null>(null);
 
-  useEffect(() => {
-    setFormData({
-      doctorId: appointment.doctor.id,
-      assistantId: appointment.assistant?.id ?? "",
-      patientId: appointment.patient.id,
-      appointmentDate: appointment.appointmentDate,
-      startTime: appointment.startTime,
-      reason: appointment.reason ?? "",
-      status: appointment.status,
-    });
-  }, [appointment]);
+  const formData =
+    formOverride?.appointment === appointment
+      ? formOverride.values
+      : getAppointmentFormData(appointment);
+  const saving = updateAppointment.isPending;
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -70,10 +70,13 @@ export default function AppointmentDetailsPage({
   ) => {
     const { name, value } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormOverride({
+      appointment,
+      values: {
+        ...formData,
+        [name]: value,
+      },
+    });
   };
 
   const save = async () => {
@@ -171,7 +174,10 @@ export default function AppointmentDetailsPage({
               label: `Dr. ${capitalizeName(doctor.firstName)} ${capitalizeName(doctor.lastName)} - ${doctor.specialty}`,
             }))}
             onChange={(value) =>
-              setFormData((prev) => ({ ...prev, doctorId: value }))
+              setFormOverride({
+                appointment,
+                values: { ...formData, doctorId: value },
+              })
             }
           />
         ) : (
@@ -207,7 +213,10 @@ export default function AppointmentDetailsPage({
               label: `${capitalizeName(patient.firstName)} ${capitalizeName(patient.lastName)}`,
             }))}
             onChange={(value) =>
-              setFormData((prev) => ({ ...prev, patientId: value }))
+              setFormOverride({
+                appointment,
+                values: { ...formData, patientId: value },
+              })
             }
           />
         ) : (
@@ -243,7 +252,10 @@ export default function AppointmentDetailsPage({
               label: `${capitalizeName(assistant.firstName)} ${capitalizeName(assistant.lastName)}`,
             }))}
             onChange={(value) =>
-              setFormData((prev) => ({ ...prev, assistantId: value }))
+              setFormOverride({
+                appointment,
+                values: { ...formData, assistantId: value },
+              })
             }
           />
         ) : appointment.assistant ? (
@@ -276,9 +288,19 @@ export default function AppointmentDetailsPage({
               { value: "COMPLETED", label: "COMPLETED" },
               { value: "CANCELLED", label: "CANCELLED" },
             ]}
-            onChange={(value) =>
-              setFormData((prev) => ({ ...prev, status: value }))
-            }
+            onChange={(value) => {
+              if (
+                value === "CONFIRMED" ||
+                value === "NO_SHOW" ||
+                value === "COMPLETED" ||
+                value === "CANCELLED"
+              ) {
+                setFormOverride({
+                  appointment,
+                  values: { ...formData, status: value },
+                });
+              }
+            }}
           />
         ) : (
           <span

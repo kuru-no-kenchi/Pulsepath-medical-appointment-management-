@@ -1,6 +1,6 @@
 "use client";
 
-import { FiCheck, FiBell } from "react-icons/fi";
+import { FiBell } from "react-icons/fi";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useNotificationMutations } from "@/mutations/useNotificationMutations";
 

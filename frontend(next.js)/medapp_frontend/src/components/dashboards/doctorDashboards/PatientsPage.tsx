@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Patient } from "@/types/patients";
 import { usePatientsByDoctor } from "@/hooks/useDoctor";
 import { capitalizeName } from "@/lib/capitalizeName";
@@ -17,20 +17,24 @@ export default function DocPatientsPage() {
   const pageSize = 5;
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([]);
   const [view, setView] = useState<PatientsView>({ mode: "list" });
 
-  const safePatients = Array.isArray(patients) ? patients : [];
+  const safePatients = useMemo(
+    () => (Array.isArray(patients) ? patients : []),
+    [patients],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredPatients = safePatients.filter((p) => {
     const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
-
-    const searchValue = search.toLowerCase();
-
     return (
-      fullName.includes(searchValue) ||
-      p.email.toLowerCase().includes(searchValue)
+      fullName.includes(normalizedSearch) ||
+      p.email.toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -39,7 +43,7 @@ export default function DocPatientsPage() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const columns = [
     {
       header: "Patient",
@@ -74,16 +78,11 @@ export default function DocPatientsPage() {
     },
   ];
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
+
     return () => window.clearTimeout(timer);
   }, [search]);
   if (isLoading) {
@@ -123,15 +122,15 @@ export default function DocPatientsPage() {
         </div>
       ) : (
         <>
-        <ErrorBoundary>
-          <DataTable
-            data={paginatedPatients}
-            columns={columns}
-            keyExtractor={(patient) => patient.id}
-            selectable
-            selectedIds={selectedPatientIds}
-            onSelectionChange={setSelectedPatientIds}
-          />
+          <ErrorBoundary>
+            <DataTable
+              data={paginatedPatients}
+              columns={columns}
+              keyExtractor={(patient) => patient.id}
+              selectable
+              selectedIds={selectedPatientIds}
+              onSelectionChange={setSelectedPatientIds}
+            />
           </ErrorBoundary>
           <Pagination
             page={page}

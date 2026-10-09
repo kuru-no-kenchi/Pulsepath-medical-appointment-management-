@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function AssistantPage({ setActiveSection }: Props) {
-  const [selectedAction, setSelectedAction] = useState<string>();
+  const [selectedAction] = useState<string>();
   const { data: appointments = [], isLoading: appointmentsLoading } =
     useAppoinmentsByAssistant();
   const { data: doctors = [], isLoading: doctorsLoading } =
@@ -109,47 +109,45 @@ export default function AssistantPage({ setActiveSection }: Props) {
           <DashboardStats stats={assistantStats} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <RecentAppointmentCard
-                children={
-                  appointments.length === 0 ? (
-                    <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
-                      <p>No appointments for today</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200">
-                      {appointments
-                        .slice(0, 5)
-                        .map((appointment: Appointment) => (
-                          <div
-                            key={appointment.id}
-                            className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {capitalizeName(appointment.patient.firstName)}{" "}
-                                {capitalizeName(appointment.patient.lastName)}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Dr. {capitalizeName(appointment.doctor.firstName)}{" "}
-                                {capitalizeName(appointment.doctor.lastName)}
-                              </p>
-                            </div>
-                            <div className="text-center">
-                              <AppointmentStatusBadge
-                                status={appointment.status}
-                              />
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400 mt-1">
-                                {appointment.appointmentDate}
-                              </p>
-                            </div>
+              <RecentAppointmentCard>
+                {appointments.length === 0 ? (
+                  <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
+                    <p>No appointments for today</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {appointments
+                      .slice(0, 5)
+                      .map((appointment: Appointment) => (
+                        <div
+                          key={appointment.id}
+                          className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {capitalizeName(appointment.patient.firstName)}{" "}
+                              {capitalizeName(appointment.patient.lastName)}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Dr. {capitalizeName(appointment.doctor.firstName)}{" "}
+                              {capitalizeName(appointment.doctor.lastName)}
+                            </p>
                           </div>
-                        ))}
-                    </div>
-                  )
-                }
-              />
+                          <div className="text-center">
+                            <AppointmentStatusBadge
+                              status={appointment.status}
+                            />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400 mt-1">
+                              {appointment.appointmentDate}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </RecentAppointmentCard>
             </div>
             <QuickActionCard actions={assistantActions} />
           </div>

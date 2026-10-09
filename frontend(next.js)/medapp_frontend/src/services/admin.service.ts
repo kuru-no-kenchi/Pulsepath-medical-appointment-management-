@@ -4,7 +4,6 @@ import { Assistant, AssistantRequest } from "@/types/assistant";
 import { Patient, PatientRequest } from "@/types/patients";
 import { UserRequest } from "@/types/user";
 import { Appointment, AppointmentRequest } from "@/types/appointment";
-import { AdminDashboard } from "@/types/adminDashboard";
 
 export const adminDoctorService = {
   async getAllDoctors(): Promise<Doctor[]> {

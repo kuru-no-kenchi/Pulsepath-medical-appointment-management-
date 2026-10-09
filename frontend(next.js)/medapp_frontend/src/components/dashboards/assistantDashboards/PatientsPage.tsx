@@ -1,4 +1,3 @@
-
 import AreaContentSkeleton from "@/components/ui/AreaContentSkeleton";
 import DataTable from "@/components/ui/DataTable";
 import { EmptyStateSkeleton } from "@/components/ui/EmptyStateSkeleton";
@@ -11,25 +10,28 @@ import { usePatientsByAssistant } from "@/hooks/useAssistant";
 import { capitalizeName } from "@/lib/capitalizeName";
 import { Patient } from "@/types/patients";
 import { AssistantPatientsView } from "@/types/view";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function AssPatientsPage() {
   const { data: patients = [], isLoading } = usePatientsByAssistant();
   const pageSize = 5;
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selecteablePatientIds, setSelectablePatientIds] = useState<string[]>(
-    [],
-  );
   const [view, setView] = useState<AssistantPatientsView>({ mode: "list" });
-  const safePatients = Array.isArray(patients) ? patients : [];
+  const safePatients = useMemo(
+    () => (Array.isArray(patients) ? patients : []),
+    [patients],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredPatients = safePatients.filter((pat) => {
-    const searchValue = search.toLowerCase();
     return (
-      pat.firstName.toLowerCase().includes(searchValue) ||
-      pat.lastName.toLowerCase().includes(searchValue)
+      pat.firstName.toLowerCase().includes(normalizedSearch) ||
+      pat.lastName.toLowerCase().includes(normalizedSearch)
     );
   });
   const totalPages = Math.ceil(filteredPatients.length / pageSize) || 1;
@@ -73,16 +75,10 @@ export default function AssPatientsPage() {
   ];
 
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
     return () => window.clearTimeout(timer);
   }, [search]);
 
@@ -121,12 +117,12 @@ export default function AssPatientsPage() {
         </div>
       ) : (
         <>
-        <ErrorBoundary>
-          <DataTable
-            data={paginatedPatients}
-            columns={columns}
-            keyExtractor={(patient) => patient.id}
-          />
+          <ErrorBoundary>
+            <DataTable
+              data={paginatedPatients}
+              columns={columns}
+              keyExtractor={(patient) => patient.id}
+            />
           </ErrorBoundary>
           <Pagination
             page={page}

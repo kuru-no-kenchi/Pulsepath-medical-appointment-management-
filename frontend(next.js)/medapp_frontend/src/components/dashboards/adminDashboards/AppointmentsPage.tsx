@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { capitalizeName } from "@/lib/capitalizeName";
 import AppointmentForm from "@/components/forms/AppointmentForm";
 import AppointmentDetailsPage from "@/components/ui/AppointmentDetailsDashboard";
-import AppointmentStatusFilter, { matchesAppointmentStatus } from "@/components/ui/AppointmentFilterStatus";
+import AppointmentStatusFilter, {
+  matchesAppointmentStatus,
+} from "@/components/ui/AppointmentFilterStatus";
 import AreaContentSkeleton from "@/components/ui/AreaContentSkeleton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTable from "@/components/ui/DataTable";
@@ -26,7 +28,6 @@ export default function AppointmentsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loadingAction, setLoadingAction] = useState(false);
   const [selectedAppointmentIds, setSelectedAppointmentIds] = useState<
@@ -37,8 +38,15 @@ export default function AppointmentsPage() {
   const [view, setView] = useState<AppointmentsView>({
     mode: "list",
   });
-  const safeAppointments = Array.isArray(appointments) ? appointments : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
+  const safeAppointments = useMemo(
+    () => (Array.isArray(appointments) ? appointments : []),
+    [appointments],
+  );
   const filteredAppointments = safeAppointments.filter((app) => {
     const matchesSearch =
       app.doctor.firstName.toLowerCase().includes(normalizedSearch) ||
@@ -52,20 +60,14 @@ export default function AppointmentsPage() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const isFormOpen = view.mode === "create" || view.mode === "edit";
 
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
 
     return () => window.clearTimeout(timer);
   }, [search]);
@@ -200,13 +202,13 @@ export default function AppointmentsPage() {
           searchPlaceholder="Search doctors..."
           actions={
             <button
-            aria-label="Add Appointment"
+              aria-label="Add Appointment"
               className="flex items-center gap-2 bg-gradient-to-r from-indigo-900 to-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
               onClick={() => {
                 setView({ mode: "create" });
               }}
             >
-              <FiPlus aria-hidden="true"/>
+              <FiPlus aria-hidden="true" />
               Add Appointment
             </button>
           }
@@ -239,15 +241,15 @@ export default function AppointmentsPage() {
         ) : (
           !isFormOpen && (
             <>
-            <ErrorBoundary>
-              <DataTable
-                data={paginatedAppointments}
-                columns={columns}
-                keyExtractor={(appointment) => appointment.id}
-                selectable
-                selectedIds={selectedAppointmentIds}
-                onSelectionChange={setSelectedAppointmentIds}
-              />
+              <ErrorBoundary>
+                <DataTable
+                  data={paginatedAppointments}
+                  columns={columns}
+                  keyExtractor={(appointment) => appointment.id}
+                  selectable
+                  selectedIds={selectedAppointmentIds}
+                  onSelectionChange={setSelectedAppointmentIds}
+                />
               </ErrorBoundary>
               <Pagination
                 page={page}

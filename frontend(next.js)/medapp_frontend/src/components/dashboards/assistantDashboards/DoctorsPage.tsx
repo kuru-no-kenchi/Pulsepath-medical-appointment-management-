@@ -1,4 +1,3 @@
-
 import AreaContentSkeleton from "@/components/ui/AreaContentSkeleton";
 import DataTable from "@/components/ui/DataTable";
 import DetailsDashboard from "@/components/ui/DoctorDetails";
@@ -11,7 +10,7 @@ import { useDoctorsByAssistant } from "@/hooks/useAssistant";
 import { capitalizeName } from "@/lib/capitalizeName";
 import { AssistantDoctor } from "@/types/assistant";
 import { AssistantDoctorsView } from "@/types/view";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function AssDoctorsPage() {
   const { data: doctors = [], isLoading } = useDoctorsByAssistant();
@@ -19,11 +18,16 @@ export default function AssDoctorsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
   const [view, setView] = useState<AssistantDoctorsView>({ mode: "list" });
-  const safeDoctors = Array.isArray(doctors) ? doctors : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeDoctors = useMemo(
+    () => (Array.isArray(doctors) ? doctors : []),
+    [doctors],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredDoctors = safeDoctors.filter((doc) => {
     return (
       doc.fullName.toLowerCase().includes(normalizedSearch) ||
@@ -36,7 +40,7 @@ export default function AssDoctorsPage() {
     page * pageSize,
   );
 
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const columns = [
     {
       header: "Doctor",
@@ -75,18 +79,10 @@ export default function AssDoctorsPage() {
     },
   ];
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
-
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
     return () => window.clearTimeout(timer);
   }, [search]);
 
@@ -129,12 +125,12 @@ export default function AssDoctorsPage() {
         </div>
       ) : (
         <>
-        <ErrorBoundary>
-          <DataTable
-            data={paginatedDoctors}
-            columns={columns}
-            keyExtractor={(doctor) => doctor.id}
-          />
+          <ErrorBoundary>
+            <DataTable
+              data={paginatedDoctors}
+              columns={columns}
+              keyExtractor={(doctor) => doctor.id}
+            />
           </ErrorBoundary>
           <Pagination
             page={page}

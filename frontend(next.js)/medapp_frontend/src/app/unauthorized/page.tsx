@@ -19,7 +19,7 @@ export default function UnauthorizedPage() {
         </h1>
 
         <p className="text-gray-500 mt-3">
-          You don't have permission to access this page.
+          You don&apos;t have permission to access this page.
         </p>
 
         <Link

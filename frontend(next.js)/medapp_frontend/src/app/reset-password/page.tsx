@@ -4,6 +4,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,16 +51,6 @@ export default function ResetPasswordPage() {
       toast.success("Password reset successfully");
       router.push("/login");
     } catch (error: unknown) {
-      const message = (
-        error as {
-          response?: {
-            data?: {
-              message?: string;
-            };
-          };
-        }
-      )?.response?.data?.message;
-
       console.error(error);
       toast.error("Unable to reset your password");
     } finally {
@@ -71,7 +62,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gray-50 flex">
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-900 via-blue-700 to-blue-500 text-white p-16 flex-col justify-center">
         <div className="max-w-xl">
-          <img src="/logo.png" alt="MedApp" className="w-16 h-16 mb-4" />
+          <Image src={"/logo.png"} alt={"MedApp"} height={16} width={16} className="mb-4"/>
           <h1 className="text-5xl font-bold mb-6">Welcome Back</h1>
 
           <p className="text-blue-100 text-lg leading-8">

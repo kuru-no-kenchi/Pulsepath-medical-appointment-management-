@@ -49,11 +49,8 @@ export default function AssistantsPage() {
   const [selectedAssistantIds, setSelectedAssistantIds] = useState<string[]>(
     [],
   );
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
-    null,
-  );
+  const [, setSelectedAssistant] = useState<Assistant | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
   const [bulkActivateOpen, setBulkActivateOpen] = useState(false);
@@ -69,8 +66,10 @@ export default function AssistantsPage() {
   const [sortKey, setSortKey] = useState<keyof Assistant | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const safeAssistants = Array.isArray(assistants) ? assistants : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeAssistants = useMemo(
+    () => (Array.isArray(assistants) ? assistants : []),
+    [assistants],
+  );
   const filteredAssistants = safeAssistants.filter((ass) => {
     const fullName = `${ass.firstName} ${ass.lastName}`.toLowerCase();
 
@@ -85,6 +84,11 @@ export default function AssistantsPage() {
 
     return matchesSearch && matchesStatus;
   });
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const sortedAssistants = useMemo(() => {
     const result = [...filteredAssistants];
     if (!sortKey) {
@@ -120,19 +124,13 @@ export default function AssistantsPage() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const isFormOpen = view.mode === "create" || view.mode === "edit";
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 350);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
 
     return () => window.clearTimeout(timer);
   }, [search]);
@@ -464,7 +462,7 @@ export default function AssistantsPage() {
                 disabled={filteredAssistants.length === 0}
                 className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FiDownload aria-hidden="true"/>
+                <FiDownload aria-hidden="true" />
                 Export CSV
               </button>
 
@@ -476,7 +474,7 @@ export default function AssistantsPage() {
                   setView({ mode: "create" });
                 }}
               >
-                <FiPlus aria-hidden="true"/>
+                <FiPlus aria-hidden="true" />
                 Add Assistant
               </button>
             </div>
@@ -543,18 +541,18 @@ export default function AssistantsPage() {
                 onDelete={() => handleBulkDelete()}
               />
               <ErrorBoundary>
-              <DataTable
-                data={paginatedAssistants}
-                columns={columns}
-                keyExtractor={(assistant) => assistant.id}
-                sortKey={sortKey}
-                sortDirection={sortDirection}
-                onSort={handleSort}
-                onClear={handleResetSorting}
-                selectable
-                selectedIds={selectedAssistantIds}
-                onSelectionChange={setSelectedAssistantIds}
-              />
+                <DataTable
+                  data={paginatedAssistants}
+                  columns={columns}
+                  keyExtractor={(assistant) => assistant.id}
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  onClear={handleResetSorting}
+                  selectable
+                  selectedIds={selectedAssistantIds}
+                  onSelectionChange={setSelectedAssistantIds}
+                />
               </ErrorBoundary>
               <Pagination
                 page={page}

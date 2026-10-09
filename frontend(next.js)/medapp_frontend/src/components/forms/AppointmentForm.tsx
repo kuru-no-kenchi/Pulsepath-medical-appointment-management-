@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Appointment,
   AppointmentFormMode,
@@ -23,7 +23,7 @@ import { useAppointmentsByAdminMutations } from "@/mutations/useAdminMutations";
 import { useAppointmentsByAssistantMutations } from "@/mutations/useAssistantMutations";
 import z from "zod";
 import { appointmentSchema } from "@/schemas/appointment.schema";
-import { useForm } from "react-hook-form";
+import { useWatch, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { capitalizeName } from "@/lib/capitalizeName";
 import DoctorAvailability from "../ui/DoctorAvailability";
@@ -55,8 +55,6 @@ export default function AppointmentForm({
   onSuccess,
   appointment,
 }: Props) {
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const [showAvailability, setShowAvailability] = useState(false);
   const assistantMode = mode === "assistant_create" || mode === "reschedule";
   const { data: assistantDoctors = [] } = useDoctorsByAssistant();
   const { data: adminDoctors = [] } = useDoctorsByAdmin();
@@ -86,16 +84,20 @@ export default function AppointmentForm({
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<AppointmentForm>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: emptyForm,
   });
-  const selectedPatientId = watch("patientId");
-  const selectedDoctorId = watch("doctorId");
-  const selectedAppointmentDate = watch("appointmentDate");
-  const selectedAssistantId = watch("assistantId");
+  const selectedPatientId = useWatch({ control, name: "patientId" });
+  const selectedDoctorId = useWatch({ control, name: "doctorId" });
+  const selectedAppointmentDate = useWatch({
+    control,
+    name: "appointmentDate",
+  });
+  const selectedAssistantId = useWatch({ control, name: "assistantId" });
+  const selectedStartTime = useWatch({ control, name: "startTime" });
   const isSaving =
     createAppointment.isPending ||
     updateAppointment.isPending ||
@@ -107,8 +109,6 @@ export default function AppointmentForm({
     markNoShow.isPending;
   useEffect(() => {
     if (!open) return;
-    setShowAvailability(false);
-    setStartTime(null);
     if (appointment) {
       reset({
         appointmentDate: appointment.appointmentDate,
@@ -121,7 +121,7 @@ export default function AppointmentForm({
     } else {
       reset(emptyForm);
     }
-  }, [appointment, open]);
+  }, [appointment, open, reset]);
   if (!open) return null;
 
   const onSubmit = async (data: AppointmentForm) => {
@@ -274,8 +274,6 @@ export default function AppointmentForm({
                 }))}
                 onChange={(value) => {
                   setValue("doctorId", value, { shouldValidate: true });
-                  setShowAvailability(Boolean(value));
-                  setStartTime(null);
                 }}
               />
               {errors.doctorId && (
@@ -308,19 +306,18 @@ export default function AppointmentForm({
                 )}
               </div>
             )}
-            {showAvailability && (
+            {
               <div className="md:col-span-2">
                 <DoctorAvailability
                   doctorId={selectedDoctorId}
                   date={selectedAppointmentDate}
-                  selectedSlot={startTime}
-                  onSlotSelect={(slot) => {
-                    setStartTime(slot);
-                    setValue("startTime", slot, { shouldValidate: true });
+                  selectedSlot={selectedStartTime || null}
+                  onSlotSelect={() => {
+                    setValue("startTime", "", { shouldValidate: true });
                   }}
                 />
               </div>
-            )}
+            }
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Time

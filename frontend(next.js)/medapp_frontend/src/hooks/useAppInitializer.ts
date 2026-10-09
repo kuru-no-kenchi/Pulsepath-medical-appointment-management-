@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAssistant } from "./useAssistant";
 import {
@@ -22,48 +22,7 @@ export function useAppInitializer() {
   const [message, setMessage] = useState("Authenticating...");
   const [progress, setProgress] = useState(0);
 
-  const initialize = async (role: Role | null) => {
-    const start = Date.now();
-    try {
-      setProgress(0);
-      setMessage("Retreiving data...");
-      await queryClient.prefetchQuery({
-        queryKey: currentUserQueryKey,
-        queryFn: userService.getCurrentUser,
-        staleTime: 1000 * 60 * 10,
-      });
-      setProgress(20);
-      switch (role) {
-        case "ADMIN":
-          await initializeAdmin();
-          break;
-        case "DOCTOR":
-          await initializeDoctor();
-          break;
-
-        case "ASSISTANT":
-          await initializeAssistant();
-          break;
-
-        case "PATIENT":
-          await initializePatient();
-          break;
-      }
-      setMessage("Preparing your workspace...");
-      setProgress(100);
-
-      const elapsed = Date.now() - start;
-      const minimum = 2100;
-      if (elapsed < minimum) {
-        await new Promise((resolve) => setTimeout(resolve, minimum - elapsed));
-      }
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  };
-
-  async function initializeAdmin() {
+  const initializeAdmin = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
     await queryClient.prefetchQuery({
@@ -115,9 +74,9 @@ export function useAppInitializer() {
       queryFn: useAppoinmentsByAdmin,
       staleTime: 1000 * 60 * 5,
     });
-  }
+  }, [queryClient, setMessage, setProgress]);
 
-  async function initializeDoctor() {
+  const initializeDoctor = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
     await queryClient.prefetchQuery({
@@ -130,9 +89,9 @@ export function useAppInitializer() {
     setProgress(50);
 
     // Prefetch doctor-specific queries here
-  }
+  }, [queryClient, setMessage, setProgress]);
 
-  async function initializeAssistant() {
+  const initializeAssistant = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
     await queryClient.prefetchQuery({
@@ -144,14 +103,63 @@ export function useAppInitializer() {
     setProgress(50);
 
     // Prefetch assistant-specific queries here
-  }
+  }, [queryClient, setMessage, setProgress]);
 
-  async function initializePatient() {
+  const initializePatient = useCallback(async () => {
     setMessage("Loading your medical records...");
     setProgress(50);
 
     // Prefetch patient-specific queries here
-  }
+  }, [setMessage, setProgress]);
+
+  const initialize = useCallback(async (role: Role | null) => {
+    const start = Date.now();
+    try {
+      setProgress(0);
+      setMessage("Retreiving data...");
+      await queryClient.prefetchQuery({
+        queryKey: currentUserQueryKey,
+        queryFn: userService.getCurrentUser,
+        staleTime: 1000 * 60 * 10,
+      });
+      setProgress(20);
+      switch (role) {
+        case "ADMIN":
+          await initializeAdmin();
+          break;
+        case "DOCTOR":
+          await initializeDoctor();
+          break;
+
+        case "ASSISTANT":
+          await initializeAssistant();
+          break;
+
+        case "PATIENT":
+          await initializePatient();
+          break;
+      }
+      setMessage("Preparing your workspace...");
+      setProgress(100);
+
+      const elapsed = Date.now() - start;
+      const minimum = 2100;
+      if (elapsed < minimum) {
+        await new Promise((resolve) => setTimeout(resolve, minimum - elapsed));
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }, [
+    initializeAdmin,
+    initializeAssistant,
+    initializeDoctor,
+    initializePatient,
+    queryClient,
+    setMessage,
+    setProgress,
+  ]);
 
   return {
     initialize,

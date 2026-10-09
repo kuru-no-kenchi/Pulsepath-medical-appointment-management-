@@ -1,4 +1,3 @@
-import { string } from "zod";
 import { Field } from "./fields";
 
 export type UserRole = "ADMIN" | "DOCTOR" | "ASSISTANT" | "PATIENT";
@@ -25,7 +24,7 @@ export interface UserResponse {
 }
 
 export interface User {
-  active: any;
+  active: boolean;
   id: string;
   email: string;
   firstName: string;

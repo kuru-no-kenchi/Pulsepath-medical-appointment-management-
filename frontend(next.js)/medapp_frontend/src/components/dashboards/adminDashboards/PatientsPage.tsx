@@ -1,4 +1,3 @@
-
 import DataTable from "@/components/ui/DataTable";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,7 +12,7 @@ import Pagination from "@/components/ui/Pagination";
 import TableActions from "@/components/ui/TableActions";
 import { Patient, patientFields } from "@/types/patients";
 import { PatientsView } from "@/types/view";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DetailsDashboard from "@/components/ui/DetailsDashboard";
 import ErrorBoundary from "@/components/ui/Error.Boundary";
 
@@ -25,15 +24,18 @@ export default function PatientsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<PatientsView>({ mode: "list" });
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [selectedPatientIds, setSelecteedPatientIds] = useState<string[]>([]);
-
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const [, setSelectedPatient] = useState<Patient | null>(null);
   const isFormOpen = view.mode === "edit";
-  const safePatients = Array.isArray(patients) ? patients : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safePatients = useMemo(
+    () => (Array.isArray(patients) ? patients : []),
+    [patients],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredPatients = safePatients.filter((ass) => {
     return (
       ass.firstName.toLowerCase().includes(normalizedSearch) ||
@@ -41,22 +43,17 @@ export default function PatientsPage() {
       ass.email.toLowerCase().includes(normalizedSearch)
     );
   });
+  const shouldWaitForDebounce = searching;
   const totalPages = Math.ceil(filteredPatients.length / pageSize) || 1;
   const paginatedPatients = filteredPatients.slice(
     (page - 1) * pageSize,
     page * pageSize,
   );
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
 
     return () => window.clearTimeout(timer);
   }, [search]);
@@ -106,18 +103,20 @@ export default function PatientsPage() {
   const columns = [
     {
       header: "Patient",
-      render: (patient: Patient) => `${capitalizeName(patient.firstName)} ${capitalizeName(patient.lastName)}`,
-      sortValue:(patient: Patient) => `${capitalizeName(patient.firstName)} ${capitalizeName(patient.lastName)}`,
+      render: (patient: Patient) =>
+        `${capitalizeName(patient.firstName)} ${capitalizeName(patient.lastName)}`,
+      sortValue: (patient: Patient) =>
+        `${capitalizeName(patient.firstName)} ${capitalizeName(patient.lastName)}`,
     },
     {
       header: "Email",
       render: (patient: Patient) => `${patient.email}`,
-      sortValue:(patient: Patient) => `${patient.email}`,
+      sortValue: (patient: Patient) => `${patient.email}`,
     },
     {
       header: "Phone",
       render: (patient: Patient) => `${patient.phone}`,
-      sortValue:(patient: Patient) => `${patient.phone}`,
+      sortValue: (patient: Patient) => `${patient.phone}`,
     },
     {
       header: "Actions",
@@ -179,12 +178,12 @@ export default function PatientsPage() {
       ) : (
         !isFormOpen && (
           <>
-          <ErrorBoundary>
-            <DataTable
-              data={paginatedPatients}
-              columns={columns}
-              keyExtractor={(patient) => patient.id}
-            />
+            <ErrorBoundary>
+              <DataTable
+                data={paginatedPatients}
+                columns={columns}
+                keyExtractor={(patient) => patient.id}
+              />
             </ErrorBoundary>
             <Pagination
               page={page}

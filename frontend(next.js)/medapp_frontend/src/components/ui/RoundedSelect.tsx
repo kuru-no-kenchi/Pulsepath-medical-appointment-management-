@@ -10,7 +10,7 @@ export interface RoundedSelectProps {
   options: SelectOption[];
   placeholder: string;
   disabled?: boolean;
-  onChange: (value: any) => void;
+  onChange: (value: string) => void;
 }
 
 export default function RoundedSelect({

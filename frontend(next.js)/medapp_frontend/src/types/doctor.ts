@@ -11,9 +11,9 @@ export interface Doctor extends User {
 }
 
 export interface DoctorRequest extends UserRequest {
-  specialty: String;
+  specialty: string;
   experienceYears: number;
-  bio: String;
+  bio: string;
   consultationDuration: number;
 }
 export interface DoctorDashboard {

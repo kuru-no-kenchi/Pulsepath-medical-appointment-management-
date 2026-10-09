@@ -46,9 +46,8 @@ export default function DoctorsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searching, setSearching] = useState(false);
   const [view, setView] = useState<DoctorsView>({ mode: "list" });
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDoctorIds, setSelectedDoctorIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
@@ -67,8 +66,15 @@ export default function DoctorsPage() {
   const [sortKey, setSortKey] = useState<keyof Doctor | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const safeDoctors = Array.isArray(doctors) ? doctors : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeDoctors = useMemo(
+    () => (Array.isArray(doctors) ? doctors : []),
+    [doctors],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredDoctors = safeDoctors.filter((doc) => {
     const fullName = `${doc.firstName} ${doc.lastName}`.toLowerCase();
 
@@ -131,16 +137,10 @@ export default function DoctorsPage() {
   }, [safeDoctors]);
 
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 350);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
 
     return () => window.clearTimeout(timer);
   }, [search]);
@@ -461,7 +461,7 @@ export default function DoctorsPage() {
                 disabled={filteredDoctors.length === 0}
                 className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FiDownload aria-hidden="true"/>
+                <FiDownload aria-hidden="true" />
                 Export CSV
               </button>
 
@@ -473,7 +473,7 @@ export default function DoctorsPage() {
                   setView({ mode: "create" });
                 }}
               >
-                <FiPlus aria-hidden="true"/>
+                <FiPlus aria-hidden="true" />
                 Add Doctor
               </button>
             </div>
@@ -553,18 +553,18 @@ export default function DoctorsPage() {
                 onDelete={() => handleBulkDelete()}
               />
               <ErrorBoundary>
-              <DataTable
-                data={paginatedDoctors}
-                columns={columns}
-                keyExtractor={(doctor) => doctor.id}
-                sortKey={sortKey}
-                sortDirection={sortDirection}
-                onSort={handleSort}
-                onClear={handleResetSorting}
-                selectable
-                selectedIds={selectedDoctorIds}
-                onSelectionChange={setSelectedDoctorIds}
-              />
+                <DataTable
+                  data={paginatedDoctors}
+                  columns={columns}
+                  keyExtractor={(doctor) => doctor.id}
+                  sortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  onClear={handleResetSorting}
+                  selectable
+                  selectedIds={selectedDoctorIds}
+                  onSelectionChange={setSelectedDoctorIds}
+                />
               </ErrorBoundary>
               <Pagination
                 page={page}

@@ -1,39 +1,39 @@
 import { Field } from "@/types/fields";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiEdit2, FiSave, FiUser } from "react-icons/fi";
 import { getImageUrl, uploadImage } from "@/services/upload.service";
 import { getErrorMessage } from "@/lib/error-message";
 import { toast } from "sonner";
 import RoundedSelect from "./RoundedSelect";
+import Image from "next/image";
 
-interface Props {
+interface Props<T extends { active: unknown }> {
   title: string;
-  entity: any;
+  entity: T;
   fields: Field[];
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: T) => Promise<void>;
   extraSection?: (
     editing: boolean,
-    formData: any,
-    setFormData: React.Dispatch<any>,
+    formData: T,
+    setFormData: React.Dispatch<React.SetStateAction<T>>,
   ) => React.ReactNode;
 }
 
-export default function ProfilePage({
+export default function ProfilePage<T extends { active: unknown }>({
   title,
   entity,
   fields,
   onSave,
   extraSection,
-}: Props) {
+}: Props<T>) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<T>(entity);
 
-  useEffect(() => {
-    if (entity) {
-      setFormData(entity);
-    }
-  }, [entity]);
+  const getFieldValue = (name: string): string => {
+    const value = (formData as Record<string, unknown>)[name];
+    return value == null ? "" : String(value);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -42,7 +42,7 @@ export default function ProfilePage({
   ) => {
     const { name, value } = e.target;
 
-    setFormData((prev: any) => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -84,7 +84,7 @@ export default function ProfilePage({
                   : "bg-gradient-to-r from-indigo-900 to-blue-500 text-white hover:bg-blue-700"
               }`}
           >
-            <FiEdit2 aria-hidden="true"/>
+            <FiEdit2 aria-hidden="true" />
             {editing ? "Cancel" : "Edit"}
           </button>
           {editing && (
@@ -94,7 +94,7 @@ export default function ProfilePage({
               disabled={loading}
               className="flex items-center cursor-pointer gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-900 to-green-500 text-white disabled:opacity-50 transition"
             >
-              <FiSave aria-hidden="true"/>
+              <FiSave aria-hidden="true" />
               {loading ? "Saving..." : "Save"}
             </button>
           )}
@@ -119,9 +119,9 @@ export default function ProfilePage({
               {field.type === "image" ? (
                 <div className="space-y-4">
                   <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border border-gray-200 shadow-sm">
-                    {formData[field.name] ? (
-                      <img
-                        src={getImageUrl(formData[field.name])}
+                    {getFieldValue(field.name) ? (
+                      <Image
+                        src={getImageUrl(getFieldValue(field.name))}
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />
@@ -139,12 +139,14 @@ export default function ProfilePage({
                         if (!file) return;
                         try {
                           const url = await uploadImage(file, "profile");
-                          setFormData((prev: any) => ({
+                          setFormData((prev) => ({
                             ...prev,
                             [field.name]: url,
                           }));
                         } catch (error) {
-                          toast.error(getErrorMessage(error, "Image upload failed."));
+                          toast.error(
+                            getErrorMessage(error, "Image upload failed."),
+                          );
                         }
                       }}
                     />
@@ -155,7 +157,7 @@ export default function ProfilePage({
                   rows={5}
                   id={field.name}
                   name={field.name}
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   onChange={handleChange}
                   disabled={!editing || field.readOnly}
                   className={`w-full rounded-lg border px-4 py-3 transition ${
@@ -166,12 +168,12 @@ export default function ProfilePage({
                 />
               ) : field.type === "select" ? (
                 <RoundedSelect
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   placeholder={`Select ${field.label}`}
                   options={field.options ?? []}
                   disabled={!editing || field.readOnly}
                   onChange={(value) =>
-                    setFormData((prev: any) => ({
+                    setFormData((prev) => ({
                       ...prev,
                       [field.name]: value,
                     }))
@@ -182,7 +184,7 @@ export default function ProfilePage({
                   type={field.type ?? "text"}
                   name={field.name}
                   id={field.name}
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   onChange={handleChange}
                   disabled={!editing || field.readOnly}
                   className={`w-full rounded-lg border px-4 py-2.5 transition ${

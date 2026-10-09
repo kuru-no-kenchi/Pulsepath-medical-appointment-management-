@@ -25,7 +25,6 @@ import QuickActionCard from "@/components/ui/QuickActions";
 import RecentAppointmentCard from "@/components/ui/RecentAppointmentCard";
 import StatsPageSkeleton from "@/components/ui/StatsPageSkeleton";
 import UpcomingAppointments from "@/components/ui/UpcomingAppointments";
-import DoctorAvailability from "@/components/ui/DoctorAvailability";
 
 interface Props {
   setActiveSection: (section: DashboardSection) => void;
@@ -58,7 +57,7 @@ export default function PatientPage({ setActiveSection }: Props) {
     useRecentVisits();
   const { data: upcoming = [], isLoading: upcomingAppointmentsLoading } =
     useUpcomingAppointments();
-  const [selectedAction, setSelectedAction] = useState<string>();
+  const [selectedAction] = useState<string>();
   const loading =
     recentVisitsLoading || upcomingAppointmentsLoading || statsLoading;
   const next = stats.nextAppointmentDate
@@ -137,90 +136,83 @@ export default function PatientPage({ setActiveSection }: Props) {
           <DashboardStats stats={patientStats} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <RecentAppointmentCard
-                title="Recent Visits"
-                children={
-                  recentVisits.length === 0 ? (
-                    <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
-                      <p>No appointments for today</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200">
-                      {recentVisits
-                        .slice(0, 3)
-                        .map((appointment: Appointment) => (
-                          <div
-                            key={appointment.id}
-                            className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {capitalizeName(appointment.patient.firstName)}{" "}
-                                {capitalizeName(appointment.patient.lastName)}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                Dr.{" "}
-                                {capitalizeName(appointment.doctor.firstName)}{" "}
-                                {capitalizeName(appointment.doctor.lastName)}
-                              </p>
-                            </div>
-                            <div className="text-center">
-                              <AppointmentStatusBadge
-                                status={appointment.status}
-                              />
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400 mt-1">
-                                {appointment.appointmentDate}
-                              </p>
-                            </div>
+              <RecentAppointmentCard title="Recent Visits">
+                {recentVisits.length === 0 ? (
+                  <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
+                    <p>No appointments for today</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {recentVisits
+                      .slice(0, 3)
+                      .map((appointment: Appointment) => (
+                        <div
+                          key={appointment.id}
+                          className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {capitalizeName(appointment.patient.firstName)}{" "}
+                              {capitalizeName(appointment.patient.lastName)}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Dr. {capitalizeName(appointment.doctor.firstName)}{" "}
+                              {capitalizeName(appointment.doctor.lastName)}
+                            </p>
                           </div>
-                        ))}
-                    </div>
-                  )
-                }
-              />
+                          <div className="text-center">
+                            <AppointmentStatusBadge
+                              status={appointment.status}
+                            />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400 mt-1">
+                              {appointment.appointmentDate}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </RecentAppointmentCard>
             </div>
             <QuickActionCard actions={patientActions} />
-
           </div>
-          <UpcomingAppointments
-            children={
-              upcoming.length === 0 ? (
-                <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
-                  <p>No upcoming visits</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {upcoming.slice(0, 3).map((appointment: Appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {capitalizeName(appointment.patient.firstName)}{" "}
-                          {capitalizeName(appointment.patient.lastName)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Dr. {capitalizeName(appointment.doctor.firstName)}{" "}
-                          {capitalizeName(appointment.doctor.lastName)}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <AppointmentStatusBadge status={appointment.status} />
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400 mt-1">
-                          {appointment.appointmentDate}
-                        </p>
-                      </div>
+          <UpcomingAppointments>
+            {upcoming.length === 0 ? (
+              <div className="divide-y divide-gray-200 mt-5 text-gray-500 px-8">
+                <p>No upcoming visits</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {upcoming.slice(0, 3).map((appointment: Appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="flex items-center justify-between py-4 hover:bg-gray-50 transition px-2 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {capitalizeName(appointment.patient.firstName)}{" "}
+                        {capitalizeName(appointment.patient.lastName)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Dr. {capitalizeName(appointment.doctor.firstName)}{" "}
+                        {capitalizeName(appointment.doctor.lastName)}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )
-            }
-          />
+                    <div className="text-center">
+                      <AppointmentStatusBadge status={appointment.status} />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400 mt-1">
+                        {appointment.appointmentDate}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </UpcomingAppointments>
         </>
       )}
     </div>

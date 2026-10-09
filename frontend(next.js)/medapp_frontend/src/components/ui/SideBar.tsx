@@ -1,6 +1,8 @@
 "use client";
 
 import { DashboardSection, SidebarItem } from "@/config/DashboardConfig";
+import type { IconType } from "react-icons";
+import Image from "next/image";
 import {
   FiHome,
   FiUser,
@@ -12,7 +14,7 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getImageUrl } from "@/services/upload.service";
@@ -26,7 +28,7 @@ interface SidebarProps {
   toggleSidebar: () => void;
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Partial<Record<DashboardSection, IconType>> = {
   dashboard: FiHome,
   doctors: FiUser,
   assistants: FiUsers,
@@ -43,9 +45,11 @@ export default function Sidebar({
   toggleSidebar,
 }: SidebarProps) {
   const { auth, logout } = useAuth();
-  const { data: currentUser, isLoading, isError } = useCurrentUser();
-  const [showPhoto, setShowPhoto] = useState(true);
+  const { data: currentUser } = useCurrentUser();
   const router = useRouter();
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const photoUrl = currentUser?.photoUrl;
+  const showPhoto = Boolean(photoUrl) && failedPhotoUrl !== photoUrl;
 
   const handleLogout = async () => {
     try {
@@ -66,18 +70,6 @@ export default function Sidebar({
 
   const userRole = auth.role ?? "User";
 
-  useEffect(() => {
-    if (!currentUser?.photoUrl) {
-      setShowPhoto(false);
-    } else {
-      setShowPhoto(true);
-    }
-  }, [currentUser]);
-
-  const handleImageError = () => {
-    setShowPhoto(false);
-  };
-
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 h-screen bg-white shadow-[0_10px_0px_rgba(0,0,0,0.08)] flex flex-col 
@@ -94,10 +86,10 @@ export default function Sidebar({
           <div className="flex items-center gap-3 ">
             <div className="relative w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center font-bold text-lg text-gray-800">
               {showPhoto && currentUser?.photoUrl ? (
-                <img
-                  src={getImageUrl(currentUser?.photoUrl)}
+                <Image
+                  src={getImageUrl(photoUrl!)}
                   alt={displayName}
-                  onError={handleImageError}
+                  onError={() => setFailedPhotoUrl(photoUrl ?? null)}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -120,7 +112,11 @@ export default function Sidebar({
           aria-label={`${isOpen ? "Back" : "Menu"}`}
           className="p-2 rounded text-white cursor-pointer"
         >
-          {isOpen ? <FiChevronLeft aria-hidden="true"/> : <FiMenu aria-hidden="true"/>}
+          {isOpen ? (
+            <FiChevronLeft aria-hidden="true" />
+          ) : (
+            <FiMenu aria-hidden="true" />
+          )}
         </button>
       </div>
       <nav className="flex-1 p-2 space-y-1 mt-3">
@@ -150,7 +146,7 @@ export default function Sidebar({
           aria-label="Logout"
           className={`w-full cursor-pointer flex items-center gap-3 px-3 py-2 rounded-lg transition text-sm font-medium text-gray-800 hover:bg-gray-100`}
         >
-          <FiLogOut size={18} aria-hidden="true"/>
+          <FiLogOut size={18} aria-hidden="true" />
           {isOpen && <span>Logout</span>}
         </button>
       </nav>

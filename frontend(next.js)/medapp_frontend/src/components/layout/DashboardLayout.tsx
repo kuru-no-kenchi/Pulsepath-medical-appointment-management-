@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { dashboardConfig, DashboardSection } from "@/config/DashboardConfig";
 import { UserRole } from "@/types/user";
 import DashboardContent from "../ui/DashboardContent";
@@ -10,18 +10,37 @@ interface Props {
   role: UserRole;
 }
 
+const MOBILE_QUERY = "(max-width: 767px)";
+
+function subscribeToMobileViewport(onChange: () => void) {
+  const mediaQuery = window.matchMedia(MOBILE_QUERY);
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getIsMobile() {
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function getServerIsMobile() {
+  return false;
+}
+
 export default function DashboardLayout({ role }: Props) {
   const items = dashboardConfig[role];
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] =
     useState<DashboardSection>("dashboard");
   const [reloadKey, setReloadKey] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 767px)").matches) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
+  const isMobile = useSyncExternalStore(
+    subscribeToMobileViewport,
+    getIsMobile,
+    getServerIsMobile,
+  );
+  const [sidebarOpenOverride, setSidebarOpenOverride] = useState<
+    boolean | null
+  >(null);
+  const isSidebarOpen = sidebarOpenOverride ?? !isMobile;
+  const setIsSidebarOpen = setSidebarOpenOverride;
 
   const handleSetActiveSection = (section: DashboardSection) => {
     if (window.matchMedia("(max-width: 767px)").matches) {

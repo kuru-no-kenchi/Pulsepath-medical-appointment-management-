@@ -1,27 +1,28 @@
 import { Field } from "@/types/fields";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FiArrowLeft, FiEdit2, FiSave, FiTrash2, FiUser } from "react-icons/fi";
 import { getErrorMessage } from "@/lib/error-message";
 import { getImageUrl, uploadImage } from "@/services/upload.service";
 import { toast } from "sonner";
+import Image from "next/image";
 import ConfirmDialog from "./ConfirmDialog";
 import RoundedSelect from "./RoundedSelect";
 
-interface Props {
+interface Props<T extends { active: unknown }> {
   title: string;
-  entity: any;
+  entity: T;
   fields: Field[];
   onBack: () => void;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: T) => Promise<void>;
   onDelete: () => Promise<void>;
   extraSection?: (
     editing: boolean,
-    formData: any,
-    setFormData: React.Dispatch<any>,
+    formData: T,
+    setFormData: React.Dispatch<React.SetStateAction<T>>,
   ) => React.ReactNode;
 }
 
-export default function DetailsDashboard({
+export default function DetailsDashboard<T extends { active: unknown }>({
   title,
   entity,
   fields,
@@ -29,18 +30,28 @@ export default function DetailsDashboard({
   onSave,
   onDelete,
   extraSection,
-}: Props) {
+}: Props<T>) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<any>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingDelete] = useState(false);
+  const [formState, setFormState] = useState({ entity, values: entity });
 
-  useEffect(() => {
-    if (entity) {
-      setFormData(entity);
-    }
-  }, [entity]);
+  const formData = formState.entity === entity ? formState.values : entity;
+
+  const setFormData: React.Dispatch<React.SetStateAction<T>> = (action) => {
+    setFormState((previous) => {
+      const current = previous.entity === entity ? previous.values : entity;
+      const values = typeof action === "function" ? action(current) : action;
+
+      return { entity, values };
+    });
+  };
+
+  const getFieldValue = (name: string): string => {
+    const value = (formData as Record<string, unknown>)[name];
+    return value == null ? "" : String(value);
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -49,7 +60,7 @@ export default function DetailsDashboard({
   ) => {
     const { name, value } = e.target;
 
-    setFormData((prev: any) => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -75,7 +86,7 @@ export default function DetailsDashboard({
             aria-label="Back"
             className="flex items-center gap-2 text-white rounded-lg border mb-3 px-4 py-3 bg-gradient-to-r from-indigo-900 to-blue-500"
           >
-            <FiArrowLeft aria-hidden="true"/>
+            <FiArrowLeft aria-hidden="true" />
           </button>
           <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
         </div>
@@ -99,7 +110,7 @@ export default function DetailsDashboard({
                   : "bg-gradient-to-r from-indigo-900 to-blue-500 text-white hover:bg-blue-700"
               }`}
           >
-            <FiEdit2 aria-hidden="true"/>
+            <FiEdit2 aria-hidden="true" />
             {editing ? "Cancel" : "Edit"}
           </button>
           {editing && (
@@ -109,7 +120,7 @@ export default function DetailsDashboard({
               aria-label={`${loading ? "Saving..." : "Save"}`}
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-900 to-green-500 text-white disabled:opacity-50 transition"
             >
-              <FiSave aria-hidden="true"/>
+              <FiSave aria-hidden="true" />
 
               {loading ? "Saving..." : "Save"}
             </button>
@@ -132,13 +143,12 @@ export default function DetailsDashboard({
               <label className="block mb-2 text-sm font-medium text-gray-700">
                 {field.label}
               </label>
-
               {field.type === "image" ? (
                 <div className="space-y-4">
                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-blue-100 shadow-sm">
-                    {formData[field.name] ? (
-                      <img
-                        src={getImageUrl(formData[field.name])}
+                    {getFieldValue(field.name) ? (
+                      <Image
+                        src={getImageUrl(getFieldValue(field.name))}
                         alt={field.label}
                         className="h-full w-full object-cover"
                       />
@@ -157,7 +167,7 @@ export default function DetailsDashboard({
 
                         try {
                           const url = await uploadImage(file, "profile");
-                          setFormData((prev: any) => ({
+                          setFormData((prev) => ({
                             ...prev,
                             [field.name]: url,
                           }));
@@ -174,7 +184,7 @@ export default function DetailsDashboard({
                 <textarea
                   rows={5}
                   name={field.name}
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   onChange={handleChange}
                   disabled={!editing || field.readOnly}
                   className={`w-full rounded-lg border px-4 py-3 transition ${
@@ -185,12 +195,12 @@ export default function DetailsDashboard({
                 />
               ) : field.type === "select" ? (
                 <RoundedSelect
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   placeholder={`Select ${field.label}`}
                   options={field.options ?? []}
                   disabled={!editing || field.readOnly}
                   onChange={(value) =>
-                    setFormData((prev: any) => ({
+                    setFormData((prev) => ({
                       ...prev,
                       [field.name]: value,
                     }))
@@ -200,7 +210,7 @@ export default function DetailsDashboard({
                 <input
                   type={field.type ?? "text"}
                   name={field.name}
-                  value={formData[field.name] ?? ""}
+                  value={getFieldValue(field.name)}
                   onChange={handleChange}
                   disabled={!editing || field.readOnly}
                   className={`w-full rounded-lg border px-4 py-2.5 transition ${
@@ -222,7 +232,7 @@ export default function DetailsDashboard({
             aria-label="Delete"
             className="flex items-center gap-2 px-5 py-2 rounded-lg text-white bg-gradient-to-r from-red-900 to-red-500 transition"
           >
-            <FiTrash2 aria-hidden="true"/>
+            <FiTrash2 aria-hidden="true" />
             Delete
           </button>
         </div>

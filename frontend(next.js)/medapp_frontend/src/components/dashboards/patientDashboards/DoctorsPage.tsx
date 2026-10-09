@@ -1,6 +1,5 @@
 import AreaContentSkeleton from "@/components/ui/AreaContentSkeleton";
 import DataTable from "@/components/ui/DataTable";
-import DoctorAvailability from "@/components/ui/DoctorAvailability";
 import { EmptyStateSkeleton } from "@/components/ui/EmptyStateSkeleton";
 import ErrorBoundary from "@/components/ui/Error.Boundary";
 import PageHeader from "@/components/ui/PageHeader";
@@ -11,7 +10,7 @@ import { useDoctorsByPatient } from "@/hooks/usePatients";
 import { capitalizeName } from "@/lib/capitalizeName";
 import { PatientDoctorView } from "@/types/patients";
 import { PatientDoctorsView } from "@/types/view";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function PatDoctorsPage() {
   const { data: doctors = [], isLoading } = useDoctorsByPatient();
@@ -19,11 +18,17 @@ export default function PatDoctorsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [searching, setSearching] = useState(false);
   const [view, setView] = useState<PatientDoctorsView>({ mode: "list" });
 
-  const safeDoctors = Array.isArray(doctors) ? doctors : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeDoctors = useMemo(
+    () => (Array.isArray(doctors) ? doctors : []),
+    [doctors],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredDoctors = safeDoctors.filter((doc) => {
     return (
       doc.firstName.toLowerCase().includes(normalizedSearch) ||
@@ -31,7 +36,7 @@ export default function PatDoctorsPage() {
       doc.specialty.toLowerCase().includes(normalizedSearch)
     );
   });
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const totalPages = Math.ceil(filteredDoctors.length / pageSize) || 1;
   const paginatedDoctors = filteredDoctors.slice(
     (page - 1) * pageSize,
@@ -75,22 +80,14 @@ export default function PatDoctorsPage() {
       ),
     },
   ];
-
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
-
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
     return () => window.clearTimeout(timer);
   }, [search]);
+  
   if (isLoading) {
     return <AreaContentSkeleton />;
   }

@@ -4,19 +4,18 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useQueryClient } from "@tanstack/react-query";
+import { UserRole } from "@/types/user";
 import { useAppInitializer } from "@/hooks/useAppInitializer";
 
 export default function LoadingPage() {
   const router = useRouter();
   const params = useSearchParams();
   const role = params.get("role");
-  const queryClient = useQueryClient();
   const { initialize, message, progress } = useAppInitializer();
 
   useEffect(() => {
     async function load() {
-      await initialize(role as any);
+      await initialize(role as UserRole);
       switch (role) {
         case "ADMIN":
           router.replace("/admin");
@@ -35,7 +34,7 @@ export default function LoadingPage() {
       }
     }
     load();
-  }, [role]);
+  }, [initialize, role, router]);
 
   return (
     <div

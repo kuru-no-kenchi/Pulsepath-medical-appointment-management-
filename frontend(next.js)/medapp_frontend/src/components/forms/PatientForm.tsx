@@ -5,9 +5,8 @@ import { usePatientByAdminMutations } from "@/mutations/useAdminMutations";
 import z from "zod";
 import { patientSchema } from "@/schemas/patient.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import RoundedSelect from "../ui/RoundedSelect";
-
 
 interface PatientFormProps {
   open: boolean;
@@ -39,7 +38,7 @@ export default function PatientForm({
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<PatientForm>({
@@ -47,7 +46,7 @@ export default function PatientForm({
     defaultValues: emptyForm,
   });
   const isSaving = updatePatient.isPending;
-  const selectedGender = watch("gender");
+  const selectedGender = useWatch({ control, name: "gender" });
   useEffect(() => {
     if (!open) return;
     if (patient) {
@@ -180,16 +179,16 @@ export default function PatientForm({
           {/*Gender */}
           <div>
             <label className="block text-sm mb-1">Gender</label>
-              <RoundedSelect
-                value={selectedGender}
-                options={[
-                  { label: "Male", value: "Male" },
-                  { label: "Female", value: "Female" },
-                ]}
+            <RoundedSelect
+              value={selectedGender}
+              options={[
+                { label: "Male", value: "Male" },
+                { label: "Female", value: "Female" },
+              ]}
               placeholder={"Select gender"}
               onChange={(value) =>
-                  setValue("gender", value, { shouldValidate: true })
-                }
+                setValue("gender", value, { shouldValidate: true })
+              }
             />
             {errors.gender && <p>{errors.gender.message}</p>}
           </div>

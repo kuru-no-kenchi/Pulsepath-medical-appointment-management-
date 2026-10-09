@@ -1,6 +1,5 @@
 import { toast } from "sonner";
 import { useDoctorMutations } from "@/mutations/useDoctorMutations";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { doctorFields } from "@/types/doctor";
 import AreaContentSkeleton from "../ui/AreaContentSkeleton";
 import ProfilePage from "../ui/ProfilePage";

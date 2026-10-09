@@ -6,7 +6,6 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { EventClickArg } from "@fullcalendar/core";
-import { useState } from "react";
 import { capitalizeName } from "@/lib/capitalizeName";
 
 interface Props {

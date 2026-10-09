@@ -1,63 +1,19 @@
 import { test, expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 
 const assistantEmail = process.env.E2E_ASSISTANT_EMAIL;
 const assistantPassword = process.env.E2E_ASSISTANT_PASSWORD;
 
-if (!assistantEmail || !assistantPassword) {
-  throw new Error("Missing E2E_ASSISTANT_EMAIL, E2E_ASSISTANT_PASSWORD");
-}
-
-function dateAfter(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-async function selectDoctor(page: Page) {
-  await page.getByRole("button", { name: "Select doctor" }).click();
-  await page
-    .getByRole("option", { name: "Dr. Etoe Doctor", exact: true })
-    .click();
-}
-
-async function selectPatient(page: Page) {
-  await page.getByRole("button", { name: "Select patient" }).click();
-  await page
-    .getByRole("option", { name: "Etoe Patient", exact: true })
-    .click();
-}
-
-async function selectAvailableTime(page: Page) {
-  const dateInput = page.getByLabel("Select date");
-  const noSlots = page.getByText("No available times for this date.", {
-    exact: true,
-  });
-  const firstSlot = page
-    .locator(".space-y-3 button")
-    .filter({ hasText: /^\d{2}:\d{2}$/ })
-    .first();
-
-  for (let daysAhead = 1; daysAhead <= 14; daysAhead += 1) {
-    await dateInput.fill(dateAfter(daysAhead));
-    await expect(firstSlot.or(noSlots)).toBeVisible({ timeout: 10000 });
-
-    if (await firstSlot.isVisible()) {
-      await firstSlot.click();
+test.describe("Assistant actions", () => {
+  test.skip(
+    !assistantEmail || !assistantPassword,
+    "Set E2E_ASSISTANT_EMAIL and E2E_ASSISTANT_PASSWORD to run assistant tests",
+  );
+  test.beforeEach(async ({ page }) => {
+    if (!assistantEmail || !assistantPassword) {
+      test.skip();
       return;
     }
-  }
-
-  throw new Error("No available appointment times found in the next 14 days");
-}
-
-test.describe("Assistant actions", () => {
-  test.beforeEach(async ({ page }) => {
     await login(page, assistantEmail, assistantPassword);
     await expect(page).toHaveURL(/\/assistants/, { timeout: 30000 });
   });
@@ -77,6 +33,10 @@ test.describe("Assistant actions", () => {
   });
 
   test("assistant can view their profile", async ({ page }) => {
+    if (!assistantEmail || !assistantPassword) {
+      test.skip();
+      return;
+    }
     await page.locator("aside > div").first().click();
     await expect(
       page.getByRole("heading", { name: /^profile$/i }),
@@ -92,7 +52,7 @@ test.describe("Assistant actions", () => {
       page.getByRole("heading", { name: /appointments page/i }),
     ).toBeVisible();
   });
- /*
+  /*
   test("assistant can create an appointment", async ({ page }) => {
     await page.getByRole("button", { name: /^appointments$/i }).click();
     await page.getByRole("button", { name: "Add Appointment" }).click();
@@ -128,4 +88,4 @@ test.describe("Assistant actions", () => {
       page.getByText("Appointment rescheduled successfully.", { exact: true }),
     ).toBeVisible();
   }); */
-}); 
+});

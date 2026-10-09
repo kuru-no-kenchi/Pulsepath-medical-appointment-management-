@@ -31,8 +31,7 @@ export default function DoctorAvailability({
     data: availableSlots = [],
     isLoading,
     isFetching,
-    isError,
-    error,
+    isError
   } = useAvailableSlots(doctorId, date);
 
   const handleSlotSelect = (slot: string) => {

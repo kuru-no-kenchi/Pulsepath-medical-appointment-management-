@@ -15,7 +15,7 @@ export interface AssistantDoctor {
   todayAppointments: number;
 }
 
-export interface AssistantRequest extends UserRequest {}
+export type AssistantRequest = UserRequest;
 
 export interface AssistantStats {
   doctorsManaged: number;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { useAppointmentsByDoctor } from "@/hooks/useDoctor";
 import { capitalizeName } from "@/lib/capitalizeName";
@@ -17,10 +17,9 @@ import ErrorBoundary from "@/components/ui/Error.Boundary";
 export default function DocAppointmentsPage() {
   const { data: appointments = [], isLoading } = useAppointmentsByDoctor();
   const pageSize = 5;
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [searching, setSearching] = useState(false);
   const [selectedAppointmentIds, setSelectedAppointmentIds] = useState<
     string[]
   >([]);
@@ -28,8 +27,15 @@ export default function DocAppointmentsPage() {
   const [view, setView] = useState<AppointmentsView>({
     mode: "list",
   });
-  const safeAppointments = Array.isArray(appointments) ? appointments : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeAppointments = useMemo(
+    () => (Array.isArray(appointments) ? appointments : []),
+    [appointments],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredAppointments = safeAppointments.filter((app) => {
     const matchSearches =
       app.patient.firstName.toLowerCase().includes(normalizedSearch) ||
@@ -101,16 +107,11 @@ export default function DocAppointmentsPage() {
     },
   ];
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
+
     return () => window.clearTimeout(timer);
   }, [search]);
 
@@ -153,15 +154,15 @@ export default function DocAppointmentsPage() {
         </div>
       ) : (
         <>
-        <ErrorBoundary>
-          <DataTable
-            data={paginatedAppointments}
-            columns={columns}
-            keyExtractor={(appointment) => appointment.id}
-            selectable
-            selectedIds={selectedAppointmentIds}
-            onSelectionChange={setSelectedAppointmentIds}
-          />
+          <ErrorBoundary>
+            <DataTable
+              data={paginatedAppointments}
+              columns={columns}
+              keyExtractor={(appointment) => appointment.id}
+              selectable
+              selectedIds={selectedAppointmentIds}
+              onSelectionChange={setSelectedAppointmentIds}
+            />
           </ErrorBoundary>
           <Pagination
             page={page}

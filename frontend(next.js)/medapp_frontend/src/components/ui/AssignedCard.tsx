@@ -1,6 +1,7 @@
 import { FiUser, FiChevronRight, FiUsers } from "react-icons/fi";
 import { IconType } from "react-icons";
 import { getImageUrl } from "@/services/upload.service";
+import Image from "next/image";
 
 export interface RelatedPerson {
   id: string;
@@ -58,7 +59,7 @@ export default function AssignedCard({
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
                   {person.photoUrl ? (
-                    <img
+                    <Image
                       src={getImageUrl(person.photoUrl)}
                       alt={person.fullName}
                       className="w-full h-full object-cover"
@@ -84,7 +85,7 @@ export default function AssignedCard({
                   )}
                 </div>
               </div>
-              <FiChevronRight className="text-gray-400" aria-hidden="true"/>
+              <FiChevronRight className="text-gray-400" aria-hidden="true" />
             </button>
           ))
         )}

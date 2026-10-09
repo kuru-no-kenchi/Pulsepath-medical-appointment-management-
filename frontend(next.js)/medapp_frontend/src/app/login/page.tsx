@@ -6,12 +6,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LoginPage() {
       {/* LEFT SIDE */}
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-900 via-blue-700 to-blue-500 text-white p-16 flex-col justify-center">
         <div className="max-w-xl">
-          <img src="/logo.png" alt="MedApp" className="w-16 h-16 mb-4" />
+          <Image src={"/logo.png"} alt={"MedApp"} height={16} width={16} className="mb-4"/>
           <h1 className="text-5xl font-bold mb-6">Welcome Back</h1>
 
           <p className="text-blue-100 text-lg leading-8">
@@ -103,7 +104,10 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email
               </label>
 
@@ -118,12 +122,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative mb-5">
                 <input
-                id="password"
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
@@ -174,7 +181,7 @@ export default function LoginPage() {
             </button>
 
             <div className="text-center text-sm text-gray-500 pt-2">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/register"
                 className="font-semibold text-blue-600 hover:text-blue-700"

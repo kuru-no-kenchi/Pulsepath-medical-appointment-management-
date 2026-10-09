@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppointmentsByPatient } from "@/hooks/usePatients";
 import { capitalizeName } from "@/lib/capitalizeName";
 import AppointmentDetailsView from "@/components/ui/AppointmentDetailsView";
@@ -23,7 +23,6 @@ export default function PatAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [searching, setSearching] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [view, setView] = useState<AppointmentsView>({
     mode: "list",
@@ -31,8 +30,15 @@ export default function PatAppointmentsPage() {
   const isFormOpen = view.mode === "create" || view.mode === "edit";
   const editAppointment =
     view.mode === "edit" ? (view.appointment as Appointment) : undefined;
-  const safeAppointments = Array.isArray(appointments) ? appointments : [];
-  const normalizedSearch = debouncedSearch.toLowerCase();
+  const safeAppointments = useMemo(
+    () => (Array.isArray(appointments) ? appointments : []),
+    [appointments],
+  );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredAppointments = safeAppointments.filter((app) => {
     const matchSearches =
       app.doctor.firstName.toLowerCase().includes(normalizedSearch) ||
@@ -47,7 +53,7 @@ export default function PatAppointmentsPage() {
     page * pageSize,
   );
 
-  const shouldWaitForDebounce = searching && search.trim() !== "";
+  const shouldWaitForDebounce = searching;
   const columns = [
     {
       header: "Patient",
@@ -105,16 +111,10 @@ export default function PatAppointmentsPage() {
     },
   ];
   useEffect(() => {
-    if (search.trim() === "") {
-      setDebouncedSearch("");
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(search);
-      setSearching(false);
-    }, 450);
+    const timer = window.setTimeout(
+      () => setDebouncedSearch(search),
+      search.trim() === "" ? 0 : 450,
+    );
 
     return () => window.clearTimeout(timer);
   }, [search]);

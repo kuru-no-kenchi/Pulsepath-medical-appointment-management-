@@ -12,14 +12,14 @@ interface Props {
 }
 
 export default function AssignedDoctorsCard({ assistantId, editing }: Props) {
-  const { data: doctors = [], isLoading } = useDoctorsByAdmin();
+  const { data: doctors = [] } = useDoctorsByAdmin();
   const { updateAssignedDoctor } = useAssistantByAdminMutations();
   const [assignedDoctorIds, setAssignedDoctorIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
-      const fullName = `${(doctor.firstName)} ${doctor.lastName}`.toLowerCase();
+      const fullName = `${doctor.firstName} ${doctor.lastName}`.toLowerCase();
 
       return (
         fullName.includes(search.toLowerCase()) ||
@@ -85,7 +85,8 @@ export default function AssignedDoctorsCard({ assistantId, editing }: Props) {
               />
               <div>
                 <p className="font-medium">
-                  Dr. {capitalizeName(doctor.firstName)} {capitalizeName(doctor.lastName)}
+                  Dr. {capitalizeName(doctor.firstName)}{" "}
+                  {capitalizeName(doctor.lastName)}
                 </p>
 
                 <p className="text-sm text-gray-500">{doctor.specialty}</p>
