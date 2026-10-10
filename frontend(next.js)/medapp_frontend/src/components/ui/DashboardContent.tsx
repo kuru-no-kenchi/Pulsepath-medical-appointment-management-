@@ -52,7 +52,7 @@ export default function DashboardContent({
       case "profile":
         return <AdminProfile />;
       default:
-        return <AdminView setActiveSection={handleSetActiveSection} />;
+        return <AdminView />;
     }
   }
 

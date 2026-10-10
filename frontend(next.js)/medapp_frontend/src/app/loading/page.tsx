@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { UserRole } from "@/types/user";
 import { useAppInitializer } from "@/hooks/useAppInitializer";
 
-export default function LoadingPage() {
+function LoadingPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const role = params.get("role");
@@ -35,7 +35,6 @@ export default function LoadingPage() {
     }
     load();
   }, [initialize, role, router]);
-
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-gradient-to-r
@@ -64,5 +63,18 @@ export default function LoadingPage() {
         <Loader2 className="mt-10 h-10 w-10 animate-spin text-white" />
       </div>
     </div>
+  );
+}
+export default function LoadingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+        </div>
+      }
+    >
+      <LoadingPageContent />
+    </Suspense>
   );
 }
