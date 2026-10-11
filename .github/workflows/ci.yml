@@ -149,6 +149,7 @@ jobs:
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         shell: bash
         env:
+          SPRING_CONFIG_ADDITIONAL_LOCATION: "file:./src/e2e/resources/"
           # Satisfies ${JWT_SECRET} in application.properties
           JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
           # Standard Spring overrides, so the datasource works even if the
