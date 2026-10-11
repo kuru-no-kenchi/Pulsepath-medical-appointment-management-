@@ -92,7 +92,7 @@ jobs:
   # --------------------------------------------------
 
   e2e:
-    name: Playwright E2E
+    name: Frontend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -116,7 +116,7 @@ jobs:
       E2E_DB_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
       E2E_DB_USERNAME: postgres
       E2E_DB_PASSWORD: postgres
-      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      E2E_JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
       E2E_JWT_EXPIRATION: 900000
       E2E_JWT_REFRESH_EXPIRATION: 604800000
       NEXT_PUBLIC_API_URL: http://localhost:8080
@@ -162,43 +162,6 @@ jobs:
 
           echo $! > "$GITHUB_WORKSPACE/backend.pid"
           echo "Started backend process with PID $(cat "$GITHUB_WORKSPACE/backend.pid")"
-        
-      - name: Wait for backend readiness
-        shell: bash
-        run: |
-          echo "Waiting for Spring Boot to become ready..."
-
-          for i in {1..10}; do
-            if curl --fail --silent \
-              http://localhost:8080/v3/api-docs \
-              -o /dev/null; then
-              echo "Backend is ready."
-              exit 0
-            fi
-
-            if ! kill -0 "$(cat "$GITHUB_WORKSPACE/backend.pid")" 2>/dev/null; then
-              echo "ERROR: Backend process has exited."
-              cat "$GITHUB_WORKSPACE/backend.log"
-              exit 1
-            fi
-
-            echo "Attempt $i/30: backend not ready yet..."
-            sleep 2
-          done
-
-          echo "ERROR: Backend did not become ready within 60 seconds."
-          echo "===== Backend logs ====="
-          cat "$GITHUB_WORKSPACE/backend.log"
-          exit 1
-
-      - name: Upload backend log
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-log
-          path: backend.log
-          if-no-files-found: ignore
-          retention-days: 7
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
