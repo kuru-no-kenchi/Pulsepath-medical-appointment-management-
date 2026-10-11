@@ -37,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: ${{secrets.YOU_INTEGRATION_TEST_DB_PASSWORD}}
           POSTGRES_DB: postgres
         ports:
-          - 5332:5432
+          - 5432:5432
         options: >-
           --health-cmd="pg_isready -U postgres -d postgres"
           --health-interval=10s
@@ -50,7 +50,7 @@ jobs:
 
     env:
       APP_NAME: MedApp
-      TEST_DB_URL: jdbc:postgresql://localhost:5332/medapp_test_db
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/medapp_test_db
       TEST_DB_USERNAME: postgres
       TEST_DB_PASSWORD: postgres
       TEST_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
@@ -113,7 +113,7 @@ jobs:
 
     env:
       APP_NAME: MedApp
-      E2E_DB_URL: jdbc:postgresql://localhost:5332/medapp_e2e_db
+      E2E_DB_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
       E2E_DB_USERNAME: postgres
       E2E_DB_PASSWORD: postgres
       E2E_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
