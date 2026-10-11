@@ -116,7 +116,7 @@ jobs:
       E2E_DB_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
       E2E_DB_USERNAME: postgres
       E2E_DB_PASSWORD: postgres
-      E2E_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
       E2E_JWT_EXPIRATION: 900000
       E2E_JWT_REFRESH_EXPIRATION: 604800000
       NEXT_PUBLIC_API_URL: http://localhost:8080
@@ -168,7 +168,7 @@ jobs:
         run: |
           echo "Waiting for Spring Boot to become ready..."
 
-          for i in {1..30}; do
+          for i in {1..10}; do
             if curl --fail --silent \
               http://localhost:8080/v3/api-docs \
               -o /dev/null; then
@@ -199,7 +199,7 @@ jobs:
           path: backend.log
           if-no-files-found: ignore
           retention-days: 7
-          
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
