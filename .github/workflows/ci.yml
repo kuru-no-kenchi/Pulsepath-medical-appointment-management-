@@ -162,6 +162,19 @@ jobs:
 
           echo $! > "$GITHUB_WORKSPACE/backend.pid"
           echo "Started backend process with PID $(cat "$GITHUB_WORKSPACE/backend.pid")"
+        
+      - name: Wait for backend
+        shell: bash
+        run: |
+          for i in $(seq 1 60); do
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || true)
+          if [ "$code" != "000" ]; then echo "Backend is up (HTTP $code)"; exit 0; fi
+          if ! kill -0 "$(cat backend.pid)" 2>/dev/null; then
+            echo "Backend process died:"; tail -100 backend.log; exit 1
+          fi
+          sleep 2
+          done
+          echo "Backend did not start in time"; tail -100 backend.log; exit 1
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -190,6 +203,8 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright E2E tests
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8080
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npx playwright test
 
