@@ -16,14 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # --------------------------------------------------
-
-  # Backend integration tests
-
-  # Uses its own PostgreSQL database.
-
-  # --------------------------------------------------
-
+  # ---------------------------------------------------------------
+  # Backend integration tests (unchanged, own PostgreSQL database)
+  # ---------------------------------------------------------------
   backend-test:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
@@ -34,7 +29,7 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: ${{secrets.YOU_INTEGRATION_TEST_DB_PASSWORD}}
+          POSTGRES_PASSWORD: ${{ secrets.YOU_INTEGRATION_TEST_DB_PASSWORD }}
           POSTGRES_DB: postgres
         ports:
           - 5432:5432
@@ -70,7 +65,6 @@ jobs:
           cache: maven
 
       - name: Create integration test database
-        working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         env:
           PGPASSWORD: postgres
         run: |
@@ -83,14 +77,9 @@ jobs:
       - name: Run backend integration tests
         run: ./mvnw -Dtest=ApplicationWorkFlowIntegrationTest test
 
-  # --------------------------------------------------
-
-  # Frontend build + Playwright E2E
-
-  # Uses a DIFFERENT PostgreSQL database.
-
-  # --------------------------------------------------
-
+  # ---------------------------------------------------------------
+  # Frontend build + Playwright E2E (own PostgreSQL database)
+  # ---------------------------------------------------------------
   e2e:
     name: Frontend Tests
     runs-on: ubuntu-latest
@@ -119,6 +108,9 @@ jobs:
       E2E_JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
       E2E_JWT_EXPIRATION: 900000
       E2E_JWT_REFRESH_EXPIRATION: 604800000
+
+      # Must be set before `npm run build` / the Next server starts,
+      # because NEXT_PUBLIC_* values are inlined at build time.
       NEXT_PUBLIC_API_URL: http://localhost:8080
 
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
@@ -143,6 +135,7 @@ jobs:
             -U postgres \
             -d postgres \
             -c "CREATE DATABASE medapp_e2e_db;"
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -150,31 +143,27 @@ jobs:
           java-version: "22"
           cache: maven
 
-      - name: Start backend Server
+      # Started in the background now so it compiles while the frontend
+      # installs and builds. We wait for it just before Playwright runs.
+      - name: Start backend server
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
         shell: bash
+        env:
+          # Satisfies ${JWT_SECRET} in application.properties
+          JWT_SECRET: ${{ secrets.E2E_JWT_SECRET }}
+          # Standard Spring overrides, so the datasource works even if the
+          # e2e properties file uses different placeholder names
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
+          SPRING_DEVTOOLS_RESTART_ENABLED: "false"
         run: |
-          set -e
-
           nohup ./mvnw spring-boot:run \
             -Dspring-boot.run.profiles=e2e \
             > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
 
           echo $! > "$GITHUB_WORKSPACE/backend.pid"
           echo "Started backend process with PID $(cat "$GITHUB_WORKSPACE/backend.pid")"
-        
-      - name: Wait for backend
-        shell: bash
-        run: |
-          for i in $(seq 1 60); do
-          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ || true)
-          if [ "$code" != "000" ]; then echo "Backend is up (HTTP $code)"; exit 0; fi
-          if ! kill -0 "$(cat backend.pid)" 2>/dev/null; then
-            echo "Backend process died:"; tail -100 backend.log; exit 1
-          fi
-          sleep 2
-          done
-          echo "Backend did not start in time"; tail -100 backend.log; exit 1
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -195,18 +184,44 @@ jobs:
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npm run build
 
+      # Fails here, with the backend log, if the backend crashed or never
+      # opened port 8080. Any HTTP response (even 401/404) counts as "up".
+      - name: Wait for backend
+        shell: bash
+        run: |
+          for i in $(seq 1 120); do
+            code=$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' http://localhost:8080/ || true)
+            if [ "$code" != "000" ]; then
+              echo "Backend is up (HTTP $code) after ~$((i * 2))s"
+              exit 0
+            fi
+            if ! kill -0 "$(cat backend.pid)" 2>/dev/null; then
+              echo "::error::Backend process died during startup. Last 100 log lines:"
+              tail -n 100 backend.log
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Backend did not start within 240s. Last 100 log lines:"
+          tail -n 100 backend.log
+          exit 1
+
       # -------------------------
       # Playwright
       # -------------------------
+      # Chromium only for speed. To run all browsers, use
+      # `npx playwright install --with-deps` and drop `--project=chromium`.
       - name: Install Playwright browsers
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
       - name: Run Playwright E2E tests
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8080
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
-        run: npx playwright test
+        run: npx playwright test --project=chromium
+
+      - name: Show backend log tail on failure
+        if: ${{ failure() }}
+        run: tail -n 100 backend.log || true
 
       # -------------------------
       # Artifacts
@@ -216,7 +231,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/playwright-report/
+          if-no-files-found: ignore
           retention-days: 14
 
       - name: Upload Playwright test results
@@ -225,12 +241,14 @@ jobs:
         with:
           name: playwright-test-results
           path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/test-results/
+          if-no-files-found: ignore
           retention-days: 14
 
       - name: Upload backend log
-        if: ${{ failure() }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: backend-log
-          path: ${{ vars.YOUR_BACKEND_DIRECTORY }}/backend.log
+          path: backend.log
+          if-no-files-found: ignore
           retention-days: 7
