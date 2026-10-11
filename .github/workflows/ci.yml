@@ -152,7 +152,7 @@ jobs:
 
       - name: Start backend Server
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
-        run: ./mvnw spring-boot:run "-Dspring-boot.run.profiles=e2e" "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5332/medapp_e2e" > ../backend.log 2>&1 &
+        run: ./mvnw spring-boot:run "-Dspring-boot.run.profiles=e2e" "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5432/medapp_e2e_db" > ../backend.log 2>&1 &
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
