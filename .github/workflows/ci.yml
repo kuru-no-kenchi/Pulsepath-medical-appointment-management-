@@ -16,14 +16,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # --------------------------------------------------
 
-# --------------------------------------------------
+  # Backend integration tests
 
-# Backend integration tests
+  # Uses its own PostgreSQL database.
 
-# Uses its own PostgreSQL database.
-
-# --------------------------------------------------
+  # --------------------------------------------------
 
   backend-test:
     name: Backend Integration Tests
@@ -38,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: ${{secrets.YOU_INTEGRATION_TEST_DB_PASSWORD}}
           POSTGRES_DB: postgres
         ports:
-          - 5432:5432
+          - 5332:5432
         options: >-
           --health-cmd="pg_isready -U postgres -d postgres"
           --health-interval=10s
@@ -51,7 +50,7 @@ jobs:
 
     env:
       APP_NAME: MedApp
-      TEST_DB_URL: jdbc:postgresql://localhost:5432/medapp_test_db
+      TEST_DB_URL: jdbc:postgresql://localhost:5332/medapp_test_db
       TEST_DB_USERNAME: postgres
       TEST_DB_PASSWORD: postgres
       TEST_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
@@ -61,10 +60,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "22"
@@ -84,13 +83,13 @@ jobs:
       - name: Run backend integration tests
         run: ./mvnw -Dtest=ApplicationWorkFlowIntegrationTest test
 
-# --------------------------------------------------
+  # --------------------------------------------------
 
-# Frontend build + Playwright E2E
+  # Frontend build + Playwright E2E
 
-# Uses a DIFFERENT PostgreSQL database.
+  # Uses a DIFFERENT PostgreSQL database.
 
-# --------------------------------------------------
+  # --------------------------------------------------
 
   e2e:
     name: Playwright E2E
@@ -114,7 +113,7 @@ jobs:
 
     env:
       APP_NAME: MedApp
-      E2E_DB_URL: jdbc:postgresql://localhost:5432/medapp_e2e_db
+      E2E_DB_URL: jdbc:postgresql://localhost:5332/medapp_e2e_db
       E2E_DB_USERNAME: postgres
       E2E_DB_PASSWORD: postgres
       E2E_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
@@ -133,7 +132,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Create E2E database
         env:
@@ -145,7 +144,7 @@ jobs:
             -d postgres \
             -c "CREATE DATABASE medapp_e2e_db;"
       - name: Set up Java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "22"
@@ -156,7 +155,7 @@ jobs:
         run: ./mvnw spring-boot:run "-Dspring-boot.run.profiles=e2e" "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5332/medapp_e2e" > ../backend.log 2>&1 &
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -180,6 +179,33 @@ jobs:
       - name: Install Playwright browsers
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npx playwright install --with-deps
+      
+      - name: Wait for backend readiness
+        shell: bash
+        run: |
+          echo "Waiting for Spring Boot to become ready..."
+
+          for i in {1..30}; do
+          if curl --fail --silent \
+            http://localhost:8080/v3/api-docs \
+            -o /dev/null; then
+          echo "Backend is ready."
+          exit 0
+          fi
+
+          echo "Attempt $i/30: backend not ready yet..."
+          sleep 2
+          done
+
+          echo "ERROR: Backend did not become ready within 60 seconds."
+          echo "===== Backend logs ====="
+
+          if [ -f "$GITHUB_WORKSPACE/backend.log" ]; then
+            cat "$GITHUB_WORKSPACE/backend.log"
+          else
+            echo "Backend log not found."
+          fi
+          exit 1
 
       - name: Run Playwright E2E tests
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
@@ -190,7 +216,7 @@ jobs:
       # -------------------------
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: frontend/playwright-report/
@@ -198,7 +224,7 @@ jobs:
 
       - name: Upload Playwright test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
           path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/test-results/
@@ -206,7 +232,7 @@ jobs:
 
       - name: Upload backend log
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: backend-log
           path: ${{ vars.YOUR_BACKEND_DIRECTORY }}/backend.log
