@@ -152,8 +152,54 @@ jobs:
 
       - name: Start backend Server
         working-directory: ${{ vars.YOUR_BACKEND_DIRECTORY }}
-        run: ./mvnw spring-boot:run "-Dspring-boot.run.profiles=e2e" "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5432/medapp_e2e_db" > ../backend.log 2>&1 &
+        shell: bash
+        run: |
+          set -e
 
+          nohup ./mvnw spring-boot:run \
+            -Dspring-boot.run.profiles=e2e \
+            > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
+
+          echo $! > "$GITHUB_WORKSPACE/backend.pid"
+          echo "Started backend process with PID $(cat "$GITHUB_WORKSPACE/backend.pid")"
+        
+      - name: Wait for backend readiness
+        shell: bash
+        run: |
+          echo "Waiting for Spring Boot to become ready..."
+
+          for i in {1..30}; do
+            if curl --fail --silent \
+              http://localhost:8080/v3/api-docs \
+              -o /dev/null; then
+              echo "Backend is ready."
+              exit 0
+            fi
+
+            if ! kill -0 "$(cat "$GITHUB_WORKSPACE/backend.pid")" 2>/dev/null; then
+              echo "ERROR: Backend process has exited."
+              cat "$GITHUB_WORKSPACE/backend.log"
+              exit 1
+            fi
+
+            echo "Attempt $i/30: backend not ready yet..."
+            sleep 2
+          done
+
+          echo "ERROR: Backend did not become ready within 60 seconds."
+          echo "===== Backend logs ====="
+          cat "$GITHUB_WORKSPACE/backend.log"
+          exit 1
+
+      - name: Upload backend log
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend.log
+          if-no-files-found: ignore
+          retention-days: 7
+          
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
@@ -179,33 +225,6 @@ jobs:
       - name: Install Playwright browsers
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
         run: npx playwright install --with-deps
-      
-      - name: Wait for backend readiness
-        shell: bash
-        run: |
-          echo "Waiting for Spring Boot to become ready..."
-
-          for i in {1..30}; do
-          if curl --fail --silent \
-            http://localhost:8080/v3/api-docs \
-            -o /dev/null; then
-          echo "Backend is ready."
-          exit 0
-          fi
-
-          echo "Attempt $i/30: backend not ready yet..."
-          sleep 2
-          done
-
-          echo "ERROR: Backend did not become ready within 60 seconds."
-          echo "===== Backend logs ====="
-
-          if [ -f "$GITHUB_WORKSPACE/backend.log" ]; then
-            cat "$GITHUB_WORKSPACE/backend.log"
-          else
-            echo "Backend log not found."
-          fi
-          exit 1
 
       - name: Run Playwright E2E tests
         working-directory: ${{ vars.YOUR_FRONTEND_DIRECTORY }}
