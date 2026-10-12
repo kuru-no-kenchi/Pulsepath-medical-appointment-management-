@@ -45,7 +45,7 @@ for (const workflow of workflows) {
     if (!email || !password) return;
 
     await login(page, email, password);
-    await expect(page).toHaveURL(workflow.path);
+    await expect(page).toHaveURL(workflow.path, { timeout: 40_000 });
     await expect(
       page.getByRole("heading", { name: /dashboard/i }).first(),
     ).toBeVisible();

@@ -5,7 +5,7 @@ export async function login(page: Page, email: string, password: string) {
   await page.getByLabel(/Email/i).fill(email);
   await page.getByRole("textbox", { name: "Password" }).fill(password);
   await page.getByRole("button", { name: /login/i }).click();
-  await page.waitForLoadState("networkidle");
+  await page.waitForURL(/\/loading\?role=/, { timeout: 15_000 });
 }
 
 export async function register(page:Page) {
