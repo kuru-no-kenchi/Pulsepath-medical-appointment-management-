@@ -51,43 +51,59 @@ async function create(
 }
 
 setup("create e2e accounts", async ({ request }) => {
-  // The admin cannot be created through the app, so it must already exist.
+  // CI creates the admin account; use it to authorize staff creation.
   const adminToken = await tryLogin(request, credentials("admin"));
   if (!adminToken) {
-    throw new Error(
-      "Admin login failed. The admin account must exist before this setup runs.",
-    );
+    throw new Error("Could not log in with the CI-created E2E admin account.");
   }
 
-  // Doctor and assistant: created by the admin.
-  // TODO: adapt endpoints and field names to your API
+  const phoneFor = (offset: number) =>
+    `06${String(Date.now() + offset).slice(-8)}`;
+
+  // Create a doctor with the fields required by DoctorRequest.
   const doctor = credentials("doctor");
   if (!(await tryLogin(request, doctor))) {
     await create(
       request,
       "/admin/create/doctor",
-      { firstName: "E2E", lastName: "Doctor", ...doctor },
+      {
+        firstName: "E2E",
+        lastName: "Doctor",
+        ...doctor,
+        phone: phoneFor(1),
+        specialty: "Cardiology",
+        experienceYears: 5,
+        bio: "Doctor created for E2E testing.",
+        consultationDuration: 30,
+      },
       adminToken,
     );
   }
 
+  // AssistantRequest uses the common user fields; no doctor-specific fields.
   const assistant = credentials("assistant");
   if (!(await tryLogin(request, assistant))) {
     await create(
       request,
       "/admin/create/assistant",
-      { firstName: "E2E", lastName: "Assistant", ...assistant },
+      {
+        firstName: "E2E",
+        lastName: "Assistant",
+        ...assistant,
+        phone: phoneFor(2),
+      },
       adminToken,
     );
   }
 
-  
+  // Patients self-register and do not need the admin token.
   const patient = credentials("patient");
   if (!(await tryLogin(request, patient))) {
     await create(request, "/auth/register", {
       firstName: "E2E",
       lastName: "Patient",
       ...patient,
+      phone: phoneFor(3),
     });
   }
 });
