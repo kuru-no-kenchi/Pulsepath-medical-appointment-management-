@@ -179,12 +179,16 @@ jobs:
             -v admin_email="$E2E_ADMIN_EMAIL" \
             -v admin_password="$E2E_ADMIN_PASSWORD" <<'SQL'
           CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
-          INSERT INTO users (email, password, role)   -- TODO: your real columns
-          SELECT :'admin_email',
-                 crypt(:'admin_password', gen_salt('bf', 10)),
-                 'ADMIN'                              -- TODO: your real role value
-          WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = :'admin_email');
+          INSERT INTO users (id, first_name, last_name, email, password, role)
+          SELECT gen_random_uuid(),
+                'E2E',
+                'ADMIN',
+                :'admin_email',
+                crypt(:'admin_password', gen_salt('bf', 10)),
+                'ADMIN'
+          WHERE NOT EXISTS (
+              SELECT 1 FROM users WHERE email = :'admin_email'
+          );
           SQL
 
       - name: Set up Node.js
@@ -221,7 +225,7 @@ jobs:
 
       - name: Upload Playwright test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
           path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/test-results/
