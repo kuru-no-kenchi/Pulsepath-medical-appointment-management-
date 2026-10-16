@@ -6,15 +6,6 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 const assistantEmail = process.env.E2E_ASSISTANT_EMAIL;
 const assistantPassword = process.env.E2E_ASSISTANT_PASSWORD;
 const letters = "abcdefghijklmnopqrstuvwxyz";
-const daysOfWeek = [
-  "SUNDAY",
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-];
 
 function generateRandomName(length = 8) {
   return Array.from(
@@ -25,51 +16,6 @@ function generateRandomName(length = 8) {
 
 function generatePhoneNumber() {
   return `06${String(Date.now() + Math.floor(Math.random() * 1000)).slice(-8)}`;
-}
-
-function localDateAfter(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-async function createScheduleAndChooseDate(
-  page: Page,
-  doctorId: string,
-  token: string,
-) {
-  for (let days = 1; days <= 14; days += 1) {
-    const date = localDateAfter(days);
-    const weekday = daysOfWeek[new Date(`${date}T00:00:00`).getDay()];
-    const response = await page.request.post(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/assistant/schedule/create`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          doctorId,
-          dayOfWeek: weekday,
-          startTime: "08:00",
-          endTime: "18:00",
-        },
-      },
-    );
-
-    if (response.ok()) return date;
-
-    const responseBody = await response.text();
-    if (!responseBody.includes("Schedule overlaps with existing period")) {
-      throw new Error(
-        `Unable to create doctor schedule (${response.status()}): ${responseBody}`,
-      );
-    }
-  }
-
-  throw new Error(
-    "Could not find a weekday for a non-overlapping doctor schedule.",
-  );
 }
 
 async function selectAvailableAppointmentTime(page: Page, date: string) {
@@ -186,7 +132,6 @@ test.describe("Admin workflows", () => {
       );
       return;
     }
-
     await page.getByRole("button", { name: /logout/i }).click();
     await expect(page).toHaveURL(/\/login/);
     await login(page, assistantEmail, assistantPassword);
@@ -212,12 +157,12 @@ test.describe("Admin workflows", () => {
     const patients: { id: string }[] = await patientsResponse.json();
     expect(patients.length).toBeGreaterThan(0);
 
-    const appointmentDate = await createScheduleAndChooseDate(
-      page,
-      doctors[0].id,
-      token,
-    );
+    const appointmentDate = process.env.E2E_APPOINTMENT_DATE;
 
+    if (!appointmentDate) {
+      test.skip(true, "appointment was not seeded correctly");
+      return;
+    }
     await page
       .getByRole("button", { name: "Appointments", exact: true })
       .click();

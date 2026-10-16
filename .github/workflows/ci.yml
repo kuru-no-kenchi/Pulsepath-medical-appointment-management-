@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "22"
@@ -170,25 +170,85 @@ jobs:
           tail -n 100 backend.log
           exit 1
 
-      - name: Create admin account
+      - name: Seed the database
         env:
           PGPASSWORD: postgres
+        shell: bash
         run: |
+          export E2E_ADMIN_EMAIL="e2e-admin@example.test"
+          export E2E_ADMIN_PASSWORD="$(openssl rand -hex 24)"
+          export E2E_DOCTOR_EMAIL="e2e-doctor@example.test"
+          export E2E_DOCTOR_PASSWORD="$(openssl rand -hex 24)"
+          export E2E_ASSISTANT_EMAIL="e2e-assistant@example.test"
+          export E2E_ASSISTANT_PASSWORD="$(openssl rand -hex 24)"
+          export E2E_PATIENT_EMAIL="e2e-patient@example.test"
+          export E2E_PATIENT_PASSWORD="$(openssl rand -hex 24)"
+          export E2E_APPOINTMENT_DATE="$(date -u -d '+1 day' +%F)"
+          E2E_APPOINTMENT_DAY="$(date -u -d "$E2E_APPOINTMENT_DATE" +%A | tr '[:lower:]' '[:upper:]')"
+
+          {
+            echo "E2E_ADMIN_EMAIL=$E2E_ADMIN_EMAIL"
+            echo "E2E_ADMIN_PASSWORD=$E2E_ADMIN_PASSWORD"
+            echo "E2E_DOCTOR_EMAIL=$E2E_DOCTOR_EMAIL"
+            echo "E2E_DOCTOR_PASSWORD=$E2E_DOCTOR_PASSWORD"
+            echo "E2E_ASSISTANT_EMAIL=$E2E_ASSISTANT_EMAIL"
+            echo "E2E_ASSISTANT_PASSWORD=$E2E_ASSISTANT_PASSWORD"
+            echo "E2E_PATIENT_EMAIL=$E2E_PATIENT_EMAIL"
+            echo "E2E_PATIENT_PASSWORD=$E2E_PATIENT_PASSWORD"
+            echo "E2E_APPOINTMENT_DATE=$E2E_APPOINTMENT_DATE"
+          } >> "$GITHUB_ENV"
+
           psql -h localhost -U postgres -d medapp_e2e_db \
             -v ON_ERROR_STOP=1 \
             -v admin_email="$E2E_ADMIN_EMAIL" \
-            -v admin_password="$E2E_ADMIN_PASSWORD" <<'SQL'
+            -v admin_password="$E2E_ADMIN_PASSWORD" \
+            -v doctor_email="$E2E_DOCTOR_EMAIL" \
+            -v doctor_password="$E2E_DOCTOR_PASSWORD" \
+            -v assistant_email="$E2E_ASSISTANT_EMAIL" \
+            -v assistant_password="$E2E_ASSISTANT_PASSWORD" \
+            -v patient_email="$E2E_PATIENT_EMAIL" \
+            -v patient_password="$E2E_PATIENT_PASSWORD" \
+            -v appointment_day="$E2E_APPOINTMENT_DAY" <<'SQL'
           CREATE EXTENSION IF NOT EXISTS pgcrypto;
-          INSERT INTO users (id, first_name, last_name, email, password, role)
-          SELECT gen_random_uuid(),
-                'E2E',
-                'ADMIN',
-                :'admin_email',
-                crypt(:'admin_password', gen_salt('bf', 10)),
-                'ADMIN'
-          WHERE NOT EXISTS (
-              SELECT 1 FROM users WHERE email = :'admin_email'
-          );
+
+          INSERT INTO users (id, first_name, last_name, email, password, phone, role)
+          VALUES
+            (gen_random_uuid(), 'E2E', 'ADMIN', :'admin_email',
+             crypt(:'admin_password', gen_salt('bf', 10)), '0611111111', 'ADMIN'),
+            (gen_random_uuid(), 'E2E', 'DOCTOR', :'doctor_email',
+             crypt(:'doctor_password', gen_salt('bf', 10)), '0611111112', 'DOCTOR'),
+            (gen_random_uuid(), 'E2E', 'ASSISTANT', :'assistant_email',
+             crypt(:'assistant_password', gen_salt('bf', 10)), '0611111113', 'ASSISTANT'),
+            (gen_random_uuid(), 'E2E', 'PATIENT', :'patient_email',
+             crypt(:'patient_password', gen_salt('bf', 10)), '0611111114', 'PATIENT');
+
+          INSERT INTO doctors (id, user_id, experience_years, specialty, bio, consultation_duration, active)
+          SELECT gen_random_uuid(), id, 5, 'Cardiology',
+                 'Doctor seeded for the E2E workflow.', 60, true
+          FROM users WHERE email = :'doctor_email';
+
+          INSERT INTO assistant (id, user_id, active)
+          SELECT gen_random_uuid(), id, true
+          FROM users WHERE email = :'assistant_email';
+
+          INSERT INTO patients (id, user_id)
+          SELECT gen_random_uuid(), id
+          FROM users WHERE email = :'patient_email';
+
+          INSERT INTO assistant_doctor (assistant_id, doctors_id)
+          SELECT a.id, d.id
+          FROM assistant a
+          JOIN users au ON au.id = a.user_id
+          CROSS JOIN doctors d
+          JOIN users du ON du.id = d.user_id
+          WHERE au.email = :'assistant_email'
+            AND du.email = :'doctor_email';
+
+          INSERT INTO doctor_schedules (id, doctor_id, day_of_week, start_time, end_time)
+          SELECT gen_random_uuid(), d.id, :'appointment_day', '08:00:00', '18:00:00'
+          FROM doctors d
+          JOIN users u ON u.id = d.user_id
+          WHERE u.email = :'doctor_email';
           SQL
 
       - name: Set up Node.js
@@ -225,7 +285,7 @@ jobs:
 
       - name: Upload Playwright test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-test-results
           path: ${{ vars.YOUR_FRONTEND_DIRECTORY }}/test-results/
