@@ -6,6 +6,8 @@ import { doctorSchema } from "@/schemas/doctor.schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useWatch } from "react-hook-form";
+import RoundedSelect from "@/components/ui/RoundedSelect";
 
 type DoctorForm = z.infer<typeof doctorSchema>;
 interface DoctorFormProps {
@@ -36,12 +38,38 @@ export default function DoctorForm({
     register,
     handleSubmit,
     reset,
+    setValue,
+    control,
+    getValues,
     formState: { errors },
   } = useForm<DoctorForm>({
     resolver: zodResolver(doctorSchema),
     defaultValues: emptyForm,
   });
+  const consultationDuration = useWatch({
+    control,
+    name: "consultationDuration",
+  });
+
+  const onInvalid = (formErrors: unknown) => {
+    const values = getValues();
+    console.error("Doctor form validation failed", {
+      values,
+      result: doctorSchema.safeParse(values),
+      errors: formErrors,
+    });
+  };
   const isSaving = createDoctor.isPending || updateDoctor.isPending;
+  const durationOptions = Array.from(
+    new Set([15, 30, 45, 60, 90, 120, doctor?.consultationDuration].filter(
+      (duration): duration is number => typeof duration === "number",
+    )),
+  )
+    .sort((a, b) => a - b)
+    .map((duration) => ({
+      value: String(duration),
+      label: `${duration} minutes`,
+    }));
   useEffect(() => {
     if (!open) return;
     if (doctor) {
@@ -66,7 +94,7 @@ export default function DoctorForm({
   const onSubmit = async (data: DoctorForm) => {
     try {
       if (doctor) {
-        toast.promise(
+        await toast.promise(
           updateDoctor.mutateAsync({
             id: doctor.id,
             doctor: data,
@@ -78,13 +106,16 @@ export default function DoctorForm({
           },
         );
       } else {
-        toast.promise(createDoctor.mutateAsync(data), {
-          loading: "Creating doctor...",
-          success: "Doctor created successfully.",
-          error: "Unable to create doctor.",
-        });
-        reset(emptyForm);
+        await toast.promise(
+          createDoctor.mutateAsync(data),
+          {
+            loading: "Creating doctor...",
+            success: "Doctor created successfully.",
+            error: "Unable to create doctor.",
+          },
+        );
       }
+      reset(emptyForm);
       onSuccess();
       onClose();
     } catch (err) {
@@ -93,33 +124,43 @@ export default function DoctorForm({
   };
 
   return (
-    <div className="fixed inset-0 h-screen w-full bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">
+    <div className="fixed inset-0 z-50 flex h-dvh w-full items-center justify-center bg-slate-950/45 p-3 backdrop-blur-[2px] sm:p-4">
+      <div className="max-h-[95dvh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="max-h-[95dvh] overflow-y-auto p-4 sm:p-6 md:p-8">
+          <div className="mb-6 flex items-start justify-between gap-4 border-b border-slate-100 pb-5 sm:mb-7">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             {doctor ? "Edit Doctor" : "Create Doctor"}
-          </h2>
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Enter the doctor&apos;s details and consultation settings.
+              </p>
+            </div>
 
-          <button
-            onClick={onClose}
-            className="text-gray-500"
-            aria-label="Close"
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form
+            onSubmit={handleSubmit(onSubmit, onInvalid)}
+            className="grid gap-4 sm:grid-cols-2 sm:gap-5"
           >
-            ✕
-          </button>
-        </div>
-
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
           {/* First Name */}
           <div>
-            <label htmlFor="first name" className="block text-sm mb-1">First Name</label>
+            <label htmlFor="first-name" className="mb-2 block text-sm font-medium text-slate-700">
+              First Name
+            </label>
             <input
               {...register("firstName")}
-              id="first name"
-              className="w-full border rounded-lg px-3 py-2"
+              id="first-name"
+              autoComplete="given-name"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
             {errors.firstName && (
               <p className="mt-1 text-sm text-red-500">
@@ -130,12 +171,15 @@ export default function DoctorForm({
 
           {/* Last Name */}
           <div>
-            <label htmlFor="last name" className="block text-sm mb-1">Last Name</label>
+            <label htmlFor="last-name" className="mb-2 block text-sm font-medium text-slate-700">
+              Last Name
+            </label>
 
             <input
               {...register("lastName")}
-              id="last name"
-              className="w-full border rounded-lg px-3 py-2"
+              id="last-name"
+              autoComplete="family-name"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
 
             {errors.lastName && (
@@ -147,12 +191,15 @@ export default function DoctorForm({
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm mb-1">Email</label>
+            <label htmlFor="doctor-email" className="mb-2 block text-sm font-medium text-slate-700">
+              Email
+            </label>
             <input
               type="email"
-              id="email"
+              id="doctor-email"
               {...register("email")}
-              className="w-full border rounded-lg px-3 py-2"
+              autoComplete="email"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-500">
@@ -163,12 +210,15 @@ export default function DoctorForm({
 
           {/* Phone */}
           <div>
-            <label htmlFor="phone" className="block text-sm mb-1">Phone</label>
+            <label htmlFor="doctor-phone" className="mb-2 block text-sm font-medium text-slate-700">
+              Phone
+            </label>
 
             <input
-            id="phone"
+              id="doctor-phone"
               {...register("phone")}
-              className="w-full border rounded-lg px-3 py-2"
+              autoComplete="tel"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
             {errors.phone && (
               <p className="mt-1 text-sm text-red-500">
@@ -179,11 +229,13 @@ export default function DoctorForm({
 
           {/* Specialty */}
           <div>
-            <label htmlFor="specialty" className="block text-sm mb-1">Specialty</label>
+            <label htmlFor="specialty" className="mb-2 block text-sm font-medium text-slate-700">
+              Specialty
+            </label>
             <input
               {...register("specialty")}
               id="specialty"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
             {errors.specialty && (
               <p className="mt-1 text-sm text-red-500">
@@ -194,11 +246,14 @@ export default function DoctorForm({
 
           {/* Experience */}
           <div>
-            <label htmlFor="experience" className="block text-sm mb-1">Experience (Years)</label>
+            <label htmlFor="experience" className="mb-2 block text-sm font-medium text-slate-700">
+              Experience (Years)
+            </label>
             <input
               type="number"
               id="experience"
-              className="w-full border rounded-lg px-3 py-2"
+              min={0}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               {...register("experienceYears", {
                 valueAsNumber: true,
               })}
@@ -212,16 +267,19 @@ export default function DoctorForm({
 
           {/* Consultation Duration */}
           <div>
-            <label htmlFor="consultation" className="block text-sm mb-1">
+            <label htmlFor="consultation-duration" className="mb-2 block text-sm font-medium text-slate-700">
               Consultation Duration (minutes)
             </label>
-            <input
-              type="number"
-              id="consultation"
-              className="w-full border rounded-lg px-3 py-2"
-              {...register("consultationDuration", {
-                valueAsNumber: true,
-              })}
+            <RoundedSelect
+              value={String(consultationDuration ?? "")}
+              placeholder="Select duration"
+              options={durationOptions}
+              onChange={(value) =>
+                setValue("consultationDuration", Number(value), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
             />
             {errors.consultationDuration && (
               <p className="mt-1 text-sm text-red-500">
@@ -231,13 +289,15 @@ export default function DoctorForm({
           </div>
 
           {/* Bio */}
-          <div className="md:col-span-2">
-            <label htmlFor="bio" className="block text-sm mb-1">Biography</label>
+          <div className="sm:col-span-2">
+            <label htmlFor="bio" className="mb-2 block text-sm font-medium text-slate-700">
+              Biography
+            </label>
             <textarea
-              rows={4}
+              rows={3}
               id="bio"
               {...register("bio")}
-              className="w-full border rounded-lg px-3 py-2 resize-none"
+              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
             />
             {errors.bio && (
               <p className="mt-1 text-sm text-red-500">{errors.bio.message}</p>
@@ -245,12 +305,12 @@ export default function DoctorForm({
           </div>
 
           {/* Actions */}
-          <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+          <div className="mt-2 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:col-span-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               aria-label="Cancel"
               onClick={onClose}
-              className="px-4 py-2 border rounded-lg"
+              className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -265,7 +325,7 @@ export default function DoctorForm({
                     : "Create Doctor"
               }`}
               disabled={isSaving}
-              className="cursor-pointer bg-gradient-to-r from-indigo-900 to-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="cursor-pointer rounded-lg bg-gradient-to-r from-indigo-900 to-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:from-indigo-800 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving
                 ? "Saving..."
@@ -274,7 +334,8 @@ export default function DoctorForm({
                   : "Create Doctor"}
             </button>
           </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

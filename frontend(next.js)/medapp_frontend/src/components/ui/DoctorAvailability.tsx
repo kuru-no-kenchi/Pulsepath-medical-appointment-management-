@@ -1,32 +1,22 @@
 "use client";
 
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
-import { useState } from "react";
 
 interface DoctorAvailabilityProps {
   doctorId: string;
   date: string;
   selectedSlot: string | null;
+  onDateChange: (date: string) => void;
   onSlotSelect: (slot: string) => void;
 }
 
-function getLocalDateString() {
-  const now = new Date();
-
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
 export default function DoctorAvailability({
   doctorId,
+  date,
+  selectedSlot,
+  onDateChange,
   onSlotSelect,
 }: DoctorAvailabilityProps) {
-  const [date, setDate] = useState(getLocalDateString());
-
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-
   const {
     data: availableSlots = [],
     isLoading,
@@ -35,9 +25,7 @@ export default function DoctorAvailability({
   } = useAvailableSlots(doctorId, date);
 
   const handleSlotSelect = (slot: string) => {
-    setSelectedSlot(slot);
-
-    onSlotSelect?.(slot);
+    onSlotSelect(slot);
   };
 
   return (
@@ -56,8 +44,7 @@ export default function DoctorAvailability({
           type="date"
           value={date}
           onChange={(e) => {
-            setDate(e.target.value);
-            setSelectedSlot(null);
+            onDateChange(e.target.value);
           }}
           className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
         />

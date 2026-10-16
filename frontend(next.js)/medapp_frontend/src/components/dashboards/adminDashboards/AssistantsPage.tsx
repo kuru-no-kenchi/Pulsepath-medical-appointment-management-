@@ -70,6 +70,11 @@ export default function AssistantsPage() {
     () => (Array.isArray(assistants) ? assistants : []),
     [assistants],
   );
+  const normalizedSearch = (
+    search.trim() === "" ? "" : debouncedSearch
+  ).toLowerCase();
+
+  const searching = search.trim() !== "" && search !== debouncedSearch;
   const filteredAssistants = safeAssistants.filter((ass) => {
     const fullName = `${ass.firstName} ${ass.lastName}`.toLowerCase();
 
@@ -84,11 +89,6 @@ export default function AssistantsPage() {
 
     return matchesSearch && matchesStatus;
   });
-  const normalizedSearch = (
-    search.trim() === "" ? "" : debouncedSearch
-  ).toLowerCase();
-
-  const searching = search.trim() !== "" && search !== debouncedSearch;
   const sortedAssistants = useMemo(() => {
     const result = [...filteredAssistants];
     if (!sortKey) {

@@ -12,7 +12,7 @@ export const userSchema = z.object({
   email: z.email(),
   password: z
     .string()
-    .min(8,"Must contain at least 8 characters")
+    .min(8, "Must contain at least 8 characters")
     .regex(/[A-Z]/, "Must contain one uppercase letter")
     .regex(/[a-z]/, "Must contain one lowercase letter")
     .regex(/[0-9]/, "Must contain one digit")

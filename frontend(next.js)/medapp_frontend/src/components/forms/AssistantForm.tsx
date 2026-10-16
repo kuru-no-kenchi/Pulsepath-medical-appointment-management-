@@ -15,6 +15,7 @@ interface AssistantFormProps {
 }
 
 type AssistantForm = z.infer<typeof assistantSchema>;
+
 const emptyForm = {
   firstName: "",
   lastName: "",
@@ -39,9 +40,12 @@ export default function AssistantForm({
     resolver: zodResolver(assistantSchema),
     defaultValues: emptyForm,
   });
+
   const isSaving = createAssistant.isPending || updateAssistant.isPending;
+
   useEffect(() => {
     if (!open) return;
+
     if (assistant) {
       reset({
         firstName: assistant.firstName,
@@ -54,6 +58,7 @@ export default function AssistantForm({
       reset(emptyForm);
     }
   }, [assistant, open, reset]);
+
   if (!open) return null;
 
   const onSubmit = async (data: AssistantForm) => {
@@ -69,6 +74,7 @@ export default function AssistantForm({
         toast.success("Assistant created successfully.");
         reset(emptyForm);
       }
+
       onSuccess();
       onClose();
     } catch (error) {
@@ -76,119 +82,169 @@ export default function AssistantForm({
     }
   };
 
+  const inputClassName =
+    "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
+
   return (
-    <div className="fixed inset-0 h-screen w-full bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-2xl p-6 shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">
-            {assistant ? "Edit Assistant" : "Create Assistant"}
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="text-gray-500"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          {/* First Name */}
-          <div>
-            <label htmlFor="first Name" className="block text-sm mb-1">First Name</label>
-            <input
-              {...register("firstName")}
-              id="first Name"
-              className="w-full border rounded-lg px-3 py-2"
-            />
-            {errors.firstName && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.firstName.message}
+    <div className="fixed inset-0 z-50 flex h-dvh w-full items-center justify-center bg-slate-950/45 p-3 backdrop-blur-[2px] sm:p-4">
+      <div className="max-h-[95dvh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="max-h-[95dvh] overflow-y-auto p-4 sm:p-6 md:p-8">
+          <div className="mb-6 flex items-start justify-between gap-4 border-b border-slate-100 pb-5 sm:mb-7">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                {assistant ? "Edit Assistant" : "Create Assistant"}
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Enter the assistant&apos;s contact details.
               </p>
-            )}
-          </div>
+            </div>
 
-          {/* Last Name */}
-          <div>
-            <label htmlFor="last name" className="block text-sm mb-1">Last Name</label>
-            <input
-              {...register("lastName")}
-              id="last name"
-              className="w-full border rounded-lg px-3 py-2"
-            />
-            {errors.lastName && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.lastName.message}
-              </p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm mb-1">Email</label>
-            <input
-              type="email"
-              id="email"
-              {...register("email")}
-              className="w-full border rounded-lg px-3 py-2"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label htmlFor="phone" className="block text-sm mb-1">Phone</label>
-            <input
-              {...register("phone")}
-              id="phone"
-              className="w-full border rounded-lg px-3 py-2"
-            />
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.phone.message}
-              </p>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="md:col-span-2 flex justify-end gap-3 mt-4">
             <button
               type="button"
-              aria-label="Cancel"
               onClick={onClose}
-              className="px-4 py-2 border rounded-lg"
+              className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              aria-label="Close"
             >
-              Cancel
+              ✕
             </button>
+          </div>
 
-            <button
-              type="submit"
-              aria-label={`${
-                isSaving
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="grid gap-4 sm:grid-cols-2 sm:gap-5"
+          >
+            <div>
+              <label
+                htmlFor="assistant-first-name"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                First Name
+              </label>
+              <input
+                {...register("firstName")}
+                id="assistant-first-name"
+                autoComplete="given-name"
+                className={inputClassName}
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="assistant-last-name"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Last Name
+              </label>
+              <input
+                {...register("lastName")}
+                id="assistant-last-name"
+                autoComplete="family-name"
+                className={inputClassName}
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="assistant-email"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Email
+              </label>
+              <input
+                type="email"
+                id="assistant-email"
+                autoComplete="email"
+                {...register("email")}
+                className={inputClassName}
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="assistant-phone"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Phone
+              </label>
+              <input
+                id="assistant-phone"
+                autoComplete="tel"
+                {...register("phone")}
+                className={inputClassName}
+              />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.phone.message}
+                </p>
+              )}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="assistant-photo-url"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Photo URL
+              </label>
+              <input
+                type="url"
+                id="assistant-photo-url"
+                {...register("photoUrl")}
+                className={inputClassName}
+              />
+              {errors.photoUrl && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.photoUrl.message}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:col-span-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                aria-label="Cancel"
+                onClick={onClose}
+                className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                aria-label={
+                  isSaving
+                    ? "Saving..."
+                    : assistant
+                      ? "Update Assistant"
+                      : "Create Assistant"
+                }
+                disabled={isSaving}
+                className="cursor-pointer rounded-lg bg-gradient-to-r from-indigo-900 to-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:from-indigo-800 hover:to-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving
                   ? "Saving..."
                   : assistant
                     ? "Update Assistant"
-                    : "Create Assistant"
-              }`}
-              disabled={isSaving}
-              className="cursor-pointer bg-gradient-to-r from-indigo-900 to-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isSaving
-                ? "Saving..."
-                : assistant
-                  ? "Update Assistant"
-                  : "Create Assistant"}
-            </button>
-          </div>
-        </form>
+                    : "Create Assistant"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

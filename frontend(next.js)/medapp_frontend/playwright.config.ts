@@ -37,10 +37,8 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
-      dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
 
@@ -77,7 +75,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "npm run start",
+    command: "npm run dev",
     url: "http://localhost:3000",
     env: { NEXT_PUBLIC_API_URL: "http://localhost:8080" },
     reuseExistingServer: !process.env.CI,

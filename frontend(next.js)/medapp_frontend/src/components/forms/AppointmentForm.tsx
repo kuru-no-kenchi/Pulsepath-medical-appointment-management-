@@ -39,14 +39,24 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
 }
-const emptyForm = {
-  appointmentDate: "",
+function getLocalDateString() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+const emptyForm = () => ({
+  appointmentDate: getLocalDateString(),
   startTime: "",
   reason: "",
   doctorId: "",
   assistantId: "",
   patientId: "",
-};
+});
 
 export default function AppointmentForm({
   open,
@@ -88,7 +98,7 @@ export default function AppointmentForm({
     formState: { errors },
   } = useForm<AppointmentForm>({
     resolver: zodResolver(appointmentSchema),
-    defaultValues: emptyForm,
+    defaultValues: emptyForm(),
   });
   const selectedPatientId = useWatch({ control, name: "patientId" });
   const selectedDoctorId = useWatch({ control, name: "doctorId" });
@@ -119,7 +129,7 @@ export default function AppointmentForm({
         patientId: appointment.patient.id,
       });
     } else {
-      reset(emptyForm);
+      reset(emptyForm());
     }
   }, [appointment, open, reset]);
   if (!open) return null;
@@ -274,6 +284,7 @@ export default function AppointmentForm({
                 }))}
                 onChange={(value) => {
                   setValue("doctorId", value, { shouldValidate: true });
+                  setValue("startTime", "", { shouldValidate: true });
                 }}
               />
               {errors.doctorId && (
@@ -312,8 +323,14 @@ export default function AppointmentForm({
                   doctorId={selectedDoctorId}
                   date={selectedAppointmentDate}
                   selectedSlot={selectedStartTime || null}
-                  onSlotSelect={() => {
+                  onDateChange={(date) => {
+                    setValue("appointmentDate", date, { shouldValidate: true });
                     setValue("startTime", "", { shouldValidate: true });
+                  }}
+                  onSlotSelect={(slot) => {
+                    setValue("startTime", slot.slice(0, 5), {
+                      shouldValidate: true,
+                    });
                   }}
                 />
               </div>
