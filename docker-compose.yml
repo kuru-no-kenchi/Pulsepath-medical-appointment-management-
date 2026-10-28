@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:18.4
+    container_name: medapp-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: medapp
+      POSTGRES_USER: phantom
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    ports:
+      - "5332:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phantom -d medapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend(springboot)/medapp_backend
+      dockerfile: Dockerfile
+    container_name: medapp-backend
+    restart: unless-stopped
+    environment:
+      APP_NAME: ${APP_NAME}
+      DB_URL: jdbc:postgresql://postgres:5432/medapp
+      DB_USERNAME: phantom
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend(next.js)/medapp_frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: medapp-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    name: medapp_postgres18_data

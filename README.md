@@ -9,6 +9,7 @@ doctors, assistants, and patients.
 - [Project structure](#project-structure)
 - [Technology stack](#technology-stack)
 - [Requirements](#requirements)
+- [Run the whole application with Docker](#run-the-whole-application-with-docker)
 - [Run locally](#run-locally)
 - [Configuration](#configuration)
 - [Tests](#tests)
@@ -63,30 +64,180 @@ terminal during local development.
 The Maven Wrapper downloads Maven as needed; a separate Maven installation is
 not required.
 
+## Run the whole application with Docker
+
+The root `docker-compose.yml` runs the complete application as three services:
+
+| Service | Container | Host address | Purpose |
+| --- | --- | --- | --- |
+| `postgres` | `medapp-postgres` | `localhost:5332` | PostgreSQL database `medapp` |
+| `backend` | `medapp-backend` | `http://localhost:8080` | Spring Boot REST API |
+| `frontend` | `medapp-frontend` | `http://localhost:3000` | Next.js web application |
+
+Docker Compose builds the backend and frontend images from their Dockerfiles.
+The backend waits for PostgreSQL's health check before starting. The frontend
+uses `NEXT_PUBLIC_API_URL` at build time; when accessing the app in a browser
+on the same machine, set it to `http://localhost:8080`.
+
+### 1. Configure Docker Compose
+
+Create a `.env` file in the repository root, next to `docker-compose.yml`:
+
+```dotenv
+APP_NAME=MedApp
+DB_PASSWORD=replace_with_a_local_database_password
+JWT_SECRET=replace_with_a_private_signing_secret
+JWT_EXPIRATION=900000
+JWT_REFRESH_EXPIRATION=604800000
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+Compose reads these variables to configure the database and backend and to
+build the frontend. `.env` is ignored by Git; do not commit actual secrets.
+Generate a strong, private JWT secret rather than using the example value.
+
+### 2. Build and start all services
+
+Run these commands from the repository root:
+
+```powershell
+docker compose up --build -d
+docker compose ps
+```
+
+The first start builds both application images and may take a few minutes.
+Once all services are running, open `http://localhost:3000`. The API is
+available at `http://localhost:8080`, with Swagger UI at
+`http://localhost:8080/swagger-ui/index.html`.
+
+The database is empty on its first start. Docker Compose does not create
+application users; restore your database backup or create accounts using the
+application's registration/admin workflow before logging in.
+
+To follow logs:
+
+```powershell
+docker compose logs -f
+```
+
+To follow logs for one service:
+
+```powershell
+docker compose logs -f backend
+docker compose logs -f postgres
+docker compose logs -f frontend
+```
+
+Stop the containers but preserve the database:
+
+```powershell
+docker compose down
+```
+
+Start them again without rebuilding:
+
+```powershell
+docker compose up -d
+```
+
+Rebuild after changing application source or Docker configuration:
+
+```powershell
+docker compose up --build -d
+```
+
+### Database volume and backups
+
+PostgreSQL stores its data in the named volume `medapp_postgres18_data`, mounted
+at `/var/lib/postgresql/` for the PostgreSQL 18 image. Stopping or removing the
+containers with `docker compose down` does not remove this volume, so the
+database persists across restarts and rebuilds.
+
+List and inspect Docker volumes:
+
+```powershell
+docker volume ls
+docker volume inspect medapp_postgres18_data
+```
+
+To remove the Compose stack **and its database volume**, use:
+
+```powershell
+docker compose down -v
+```
+
+This permanently deletes the database data in that volume. Do not use `-v`
+unless you intentionally want to erase the database.
+
+Create a custom-format PostgreSQL backup without sending binary output through
+PowerShell redirection:
+
+```powershell
+docker exec medapp-postgres pg_dump -U phantom -d medapp -Fc -f /tmp/medapp.dump
+docker cp medapp-postgres:/tmp/medapp.dump .\medapp_backup.dump
+```
+
+Restore a valid custom-format dump into the Compose database:
+
+```powershell
+docker cp .\medapp_backup.dump medapp-postgres:/tmp/medapp_backup.dump
+docker exec medapp-postgres pg_restore --format=custom --exit-on-error --no-owner --no-privileges -U phantom -d medapp /tmp/medapp_backup.dump
+```
+
+`pg_restore` is for PostgreSQL archive formats such as custom (`pg_dump -Fc`)
+and tar (`pg_dump -Ft`). A plain SQL dump must instead be restored with
+`psql -v ON_ERROR_STOP=1 -f`. Restore into a suitable database; restoring over
+an already-populated schema may cause conflicts. Keep a separate copy of the
+backup and verify it before changing or deleting any existing database volume.
+
+### Docker troubleshooting
+
+- **A container name is already in use:** this Compose file assigns fixed
+  container names. Inspect the existing container before removing or renaming
+  it. Removing a container without `-v` preserves named volumes, but do not
+  remove a container that belongs to another running stack without checking it.
+- **PostgreSQL is unhealthy:** inspect `docker compose logs postgres` and
+  `docker inspect medapp-postgres`. PostgreSQL 18 uses a versioned data
+  directory below `/var/lib/postgresql/`; this Compose file mounts the volume
+  at that parent directory. An older volume created with a different
+  PostgreSQL major version may require a database dump/restore or a proper
+  `pg_upgrade`; simply mounting it at a different path does not upgrade it.
+- **Frontend cannot reach the API:** from a browser on the host,
+  `NEXT_PUBLIC_API_URL` should be `http://localhost:8080`, not the Compose
+  service hostname. Because this value is baked into the frontend build, rebuild
+  the frontend after changing it:
+
+  ```powershell
+  docker compose build frontend
+  docker compose up -d frontend
+  ```
+
 ## Run locally
+
+The Docker Compose workflow above is the simplest way to run the full app.
+Alternatively, run the backend and frontend from source while using Compose
+only for PostgreSQL.
 
 ### 1. Start PostgreSQL
 
-The backend directory contains a Docker Compose PostgreSQL service. From the
-repository root:
+Create the root `.env` file described above, then run only the database
+service from the repository root:
 
-```bash
-cd "backend(springboot)/medapp_backend"
+```powershell
 docker compose up -d postgres
 ```
 
-This service maps PostgreSQL to host port `5332`. Its development database name
-and credentials are defined in `docker-compose.yml`. Use those local-only
-credentials when configuring the backend; do not reuse them outside development.
-The commands below assume the terminal remains in the backend directory.
+The database is available on host port `5332`. Use `DB_PASSWORD` from the root
+`.env` file and database username `phantom` in the backend `.env.local` file.
+Keep this development database and its credentials local.
 
-To stop the service:
+To stop the database container while preserving its data:
 
 ```bash
 docker compose down
 ```
 
-To remove the local database volume as well (this deletes its data):
+To remove the database volume as well (this permanently deletes its data):
 
 ```bash
 docker compose down -v
@@ -102,7 +253,7 @@ PostgreSQL instance:
 ```properties
 APP_NAME=MedApp
 DB_URL=jdbc:postgresql://localhost:5332/medapp
-DB_USERNAME=your_local_database_user
+DB_USERNAME=phantom
 DB_PASSWORD=your_local_database_password
 JWT_SECRET=replace_with_a_private_signing_secret
 JWT_EXPIRATION=900000
