@@ -1,21 +1,27 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAssistant } from "./useAssistant";
-import {
-  useAdmin,
-  useAppoinmentsByAdmin,
-  useAssistantsByAdmin,
-  useDashboardStats,
-  useDoctorsByAdmin,
-  usePatientsByAdmin,
-} from "./useAdmin";
 import { useDoctor } from "./useDoctor";
 import { currentUserQueryKey } from "./useCurrentUser";
 import { userService } from "@/services/user.service";
 import { notificationService } from "@/services/notification.service";
 import { notificationKeys } from "./useNotifications";
+import {
+  adminAppointmentService,
+  adminAssistantService,
+  adminDashboardService,
+  adminDoctorService,
+  adminPatientService,
+} from "@/services/admin.service";
 
 type Role = "ADMIN" | "DOCTOR" | "ASSISTANT" | "PATIENT";
+
+const noAuthRetry = (failureCount: number, error: unknown) => {
+  const status = (error as { response?: { status?: number } })?.response
+    ?.status;
+  if (status === 401 || status === 403) return false;
+  return failureCount < 1;
+};
 
 export function useAppInitializer() {
   const queryClient = useQueryClient();
@@ -25,141 +31,164 @@ export function useAppInitializer() {
   const initializeAdmin = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
+
     await queryClient.prefetchQuery({
       queryKey: ["profile"],
-      queryFn: useAdmin,
+      queryFn: adminDashboardService.getProfile,
       staleTime: 1000 * 60 * 10,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading dashboard...");
     setProgress(20);
+
     await queryClient.prefetchQuery({
       queryKey: ["dashboard"],
-      queryFn: useDashboardStats,
+      queryFn: adminDashboardService.getStats,
       staleTime: 1000 * 60 * 5,
+      retry: noAuthRetry,
     });
-    queryClient.prefetchQuery({
+
+    await queryClient.prefetchQuery({
       queryKey: notificationKeys.unreadCount(),
       queryFn: notificationService.getUnreadCount,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading doctors...");
     setProgress(45);
+
     await queryClient.prefetchQuery({
       queryKey: ["doctors"],
-      queryFn: useDoctorsByAdmin,
+      queryFn: adminDoctorService.getAllDoctors,
       staleTime: 1000 * 60 * 5,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading assistants...");
     setProgress(60);
+
     await queryClient.prefetchQuery({
       queryKey: ["assistants"],
-      queryFn: useAssistantsByAdmin,
+      queryFn: adminAssistantService.getAssistants,
       staleTime: 1000 * 60 * 5,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading patients...");
     setProgress(75);
+
     await queryClient.prefetchQuery({
       queryKey: ["patients"],
-      queryFn: usePatientsByAdmin,
+      queryFn: adminPatientService.getPatients,
       staleTime: 1000 * 60 * 5,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading appointments...");
     setProgress(90);
+
     await queryClient.prefetchQuery({
       queryKey: ["appointments"],
-      queryFn: useAppoinmentsByAdmin,
+      queryFn: adminAppointmentService.getAppointments,
       staleTime: 1000 * 60 * 5,
+      retry: noAuthRetry,
     });
-  }, [queryClient, setMessage, setProgress]);
+  }, [queryClient]);
 
   const initializeDoctor = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
+
     await queryClient.prefetchQuery({
       queryKey: ["profile"],
       queryFn: useDoctor,
       staleTime: 1000 * 60 * 10,
+      retry: noAuthRetry,
     });
 
     setMessage("Loading your appointments...");
     setProgress(50);
-
-    // Prefetch doctor-specific queries here
-  }, [queryClient, setMessage, setProgress]);
+  }, [queryClient]);
 
   const initializeAssistant = useCallback(async () => {
     setMessage("Loading your profile...");
     setProgress(10);
+
     await queryClient.prefetchQuery({
       queryKey: ["profile"],
       queryFn: useAssistant,
       staleTime: 1000 * 60 * 10,
+      retry: noAuthRetry,
     });
+
     setMessage("Loading your workspace...");
     setProgress(50);
-
-    // Prefetch assistant-specific queries here
-  }, [queryClient, setMessage, setProgress]);
+  }, [queryClient]);
 
   const initializePatient = useCallback(async () => {
     setMessage("Loading your medical records...");
     setProgress(50);
+  }, []);
 
-    // Prefetch patient-specific queries here
-  }, [setMessage, setProgress]);
+  const initialize = useCallback(
+    async (role: Role | null) => {
+      const start = Date.now();
 
-  const initialize = useCallback(async (role: Role | null) => {
-    const start = Date.now();
-    try {
-      setProgress(0);
-      setMessage("Retreiving data...");
-      await queryClient.prefetchQuery({
-        queryKey: currentUserQueryKey,
-        queryFn: userService.getCurrentUser,
-        staleTime: 1000 * 60 * 10,
-      });
-      setProgress(20);
-      switch (role) {
-        case "ADMIN":
-          await initializeAdmin();
-          break;
-        case "DOCTOR":
-          await initializeDoctor();
-          break;
+      try {
+        setProgress(0);
+        setMessage("Retrieving data...");
 
-        case "ASSISTANT":
-          await initializeAssistant();
-          break;
+        await queryClient.prefetchQuery({
+          queryKey: currentUserQueryKey,
+          queryFn: userService.getCurrentUser,
+          staleTime: 1000 * 60 * 10,
+          retry: noAuthRetry,
+        });
 
-        case "PATIENT":
-          await initializePatient();
-          break;
+        setProgress(20);
+
+        switch (role) {
+          case "ADMIN":
+            await initializeAdmin();
+            break;
+          case "DOCTOR":
+            await initializeDoctor();
+            break;
+          case "ASSISTANT":
+            await initializeAssistant();
+            break;
+          case "PATIENT":
+            await initializePatient();
+            break;
+          default:
+            throw new Error("Missing or invalid user role");
+        }
+
+        setMessage("Preparing your workspace...");
+        setProgress(100);
+
+        const elapsed = Date.now() - start;
+        const minimum = 2100;
+
+        if (elapsed < minimum) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, minimum - elapsed),
+          );
+        }
+      } catch (error) {
+        console.error(error);
+        throw error;
       }
-      setMessage("Preparing your workspace...");
-      setProgress(100);
-
-      const elapsed = Date.now() - start;
-      const minimum = 2100;
-      if (elapsed < minimum) {
-        await new Promise((resolve) => setTimeout(resolve, minimum - elapsed));
-      }
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  }, [
-    initializeAdmin,
-    initializeAssistant,
-    initializeDoctor,
-    initializePatient,
-    queryClient,
-    setMessage,
-    setProgress,
-  ]);
+    },
+    [
+      initializeAdmin,
+      initializeAssistant,
+      initializeDoctor,
+      initializePatient,
+      queryClient,
+    ],
+  );
 
   return {
     initialize,

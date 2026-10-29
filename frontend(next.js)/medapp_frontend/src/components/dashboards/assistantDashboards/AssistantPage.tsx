@@ -17,6 +17,7 @@ import { DashboardSection } from "@/config/DashboardConfig";
 import { useState } from "react";
 import { CiUnread } from "react-icons/ci";
 import { FiUser, FiUsers, FiCalendar, FiCheckCircle } from "react-icons/fi";
+import { useAppointmentsByAssistantMutations } from "@/mutations/useAssistantMutations";
 import AssAppointmentsPage from "./AppointmentsPage";
 import AssDoctorsPage from "./DoctorsPage";
 import AssPatientsPage from "./PatientsPage";
@@ -27,6 +28,7 @@ interface Props {
 
 export default function AssistantPage({ setActiveSection }: Props) {
   const [selectedAction] = useState<string>();
+  const { createSchedule } = useAppointmentsByAssistantMutations();
   const { data: appointments = [], isLoading: appointmentsLoading } =
     useAppoinmentsByAssistant();
   const { data: doctors = [], isLoading: doctorsLoading } =
@@ -43,6 +45,8 @@ export default function AssistantPage({ setActiveSection }: Props) {
     isLoading: statsLoading,
   } = useDashboardStats();
   const loading = doctorsLoading || appointmentsLoading || statsLoading;
+  const handleDoctorSelect = () => setActiveSection("doctors");
+
   const assistantActions = [
     {
       label: "Mangage Doctors",
@@ -153,7 +157,10 @@ export default function AssistantPage({ setActiveSection }: Props) {
           </div>
           <AssignedCard
             title="Assigned Doctors"
+            canManageSchedules={true}
             emptyMessage="No assigned Doctors"
+            onSelect={handleDoctorSelect}
+            onCreateSchedule={(payload) => createSchedule.mutateAsync(payload)}
             people={doctors.map((d: AssistantDoctor) => ({
               id: d.id,
               fullName: `Dr. ${d.fullName}`,

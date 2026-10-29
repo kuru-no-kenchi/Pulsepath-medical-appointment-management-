@@ -4,6 +4,7 @@ import {
   AppointmentRescheduleRequest,
 } from "@/types/appointment";
 import { AssistantRequest } from "@/types/assistant";
+import { DoctorScheduleRequest } from "@/types/doctor";
 
 const ASSISTANT_URL = "/assistant";
 
@@ -33,6 +34,14 @@ export const assistantService = {
 
   async getManagedDoctors() {
     const response = await API.get(`${ASSISTANT_URL}/my/doctors`);
+    return response.data;
+  },
+
+  async createScheduleForDoctor(payload: DoctorScheduleRequest) {
+    const response = await API.post(
+      `${ASSISTANT_URL}/schedule/create`,
+      payload,
+    );
     return response.data;
   },
 

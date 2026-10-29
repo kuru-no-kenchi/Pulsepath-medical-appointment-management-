@@ -1,40 +1,64 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { UserRole } from "@/types/user";
 import { useAppInitializer } from "@/hooks/useAppInitializer";
+import { userService } from "@/services/user.service";
 
 function LoadingPageContent() {
   const router = useRouter();
-  const params = useSearchParams();
-  const role = params.get("role");
   const { initialize, message, progress } = useAppInitializer();
 
   useEffect(() => {
+    let isMounted = true;
+
     async function load() {
-      await initialize(role as UserRole);
-      switch (role) {
-        case "ADMIN":
-          router.replace("/admin");
-          break;
-        case "DOCTOR":
-          router.replace("/doctor");
-          break;
-        case "ASSISTANT":
-          router.replace("/assistants");
-          break;
-        case "PATIENT":
-          router.replace("/patient");
-          break;
-        default:
+      try {
+        const currentUser = await userService.getCurrentUser();
+        const role = (currentUser?.role ?? null) as UserRole | null;
+
+        if (!isMounted) return;
+
+        if (!role) {
           router.replace("/login");
+          return;
+        }
+
+        await initialize(role);
+
+        switch (role) {
+          case "ADMIN":
+            router.replace("/admin");
+            break;
+          case "DOCTOR":
+            router.replace("/doctor");
+            break;
+          case "ASSISTANT":
+            router.replace("/assistants");
+            break;
+          case "PATIENT":
+            router.replace("/patient");
+            break;
+          default:
+            router.replace("/login");
+        }
+      } catch (error) {
+        if (isMounted) {
+          router.replace("/login");
+        }
       }
     }
+
     load();
-  }, [initialize, role, router]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialize, router]);
+
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-gradient-to-r
@@ -65,6 +89,7 @@ function LoadingPageContent() {
     </div>
   );
 }
+
 export default function LoadingPage() {
   return (
     <Suspense

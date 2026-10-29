@@ -135,59 +135,46 @@ API.interceptors.response.use(
 
   async (error: AxiosError) => {
     const originalRequest = error.config as
-      | (InternalAxiosRequestConfig & {
-          _retry?: boolean;
-        })
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
 
-    /*
-     * Only 401 should trigger token refresh.
-     */
-    if (error.response?.status !== 401 || !originalRequest) {
+    const status = error.response?.status;
+
+    if (!originalRequest) {
       return Promise.reject(normalizeApiError(error));
     }
 
-    /*
-     * Never attempt to refresh the refresh request itself.
-     */
+    if (status === 403) {
+      return Promise.reject(normalizeApiError(error));
+    }
+
+    if (status !== 401) {
+      return Promise.reject(normalizeApiError(error));
+    }
+
     if (originalRequest.url?.includes("/token/refresh")) {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
-
       window.location.href = "/login";
-
       return Promise.reject(normalizeApiError(error));
     }
 
-    /*
-     * If another request is already refreshing,
-     * wait for that refresh.
-     */
     if (isRefreshing) {
       return new Promise<string>((resolve, reject) => {
-        failedQueue.push({
-          resolve,
-          reject,
-        });
+        failedQueue.push({ resolve, reject });
       }).then((token) => {
         originalRequest.headers.Authorization = `Bearer ${token}`;
-
         return API(originalRequest);
       });
     }
 
-    /*
-     * Prevent retry loop.
-     */
     originalRequest._retry = true;
     isRefreshing = true;
 
     try {
-      const response = await API.post<{
-        token: string;
-        role: string;
-      }>("/token/refresh");
-
+      const response = await API.post<{ token: string; role: string }>(
+        "/token/refresh",
+      );
       const newToken = response.data.token;
       const newRole = response.data.role;
 
@@ -197,16 +184,12 @@ API.interceptors.response.use(
       processQueue(null, newToken);
 
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
       return API(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-
       localStorage.removeItem("token");
       localStorage.removeItem("role");
-
       window.location.href = "/login";
-
       return Promise.reject(normalizeApiError(refreshError));
     } finally {
       isRefreshing = false;

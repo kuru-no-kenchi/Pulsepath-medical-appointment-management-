@@ -26,6 +26,13 @@ export interface DoctorDashboard {
 export interface DoctorPatient extends Patient {
   history: AppointmentSummary;
 }
+
+export interface DoctorScheduleRequest {
+  doctorId: string;
+  startTime: string;
+  endTime: string;
+  dayOfWeek: string;
+}
 export const doctorFields: Field[] = [
   {
     label: "Photo",

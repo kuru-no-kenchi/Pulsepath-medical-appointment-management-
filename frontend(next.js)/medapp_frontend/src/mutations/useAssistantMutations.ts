@@ -78,11 +78,29 @@ export function useAppointmentsByAssistantMutations() {
       toast.error(getErrorMessage(error));
     },
   });
+
+  const createSchedule = useMutation({
+    mutationFn: assistantService.createScheduleForDoctor,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["doctors-assistant"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["available-slots"],
+        }),
+      ]);
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
   return {
     createAppointmentByAssistant,
     rescheduleAppointment,
     cancelAppointmentByAssistant,
     markComplete,
     markNoShow,
+    createSchedule,
   };
 }
