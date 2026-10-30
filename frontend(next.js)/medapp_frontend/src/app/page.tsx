@@ -40,7 +40,7 @@ const features = [
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white text-gray-900">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50 text-gray-900">
       {/* Navigation */}
       <header className="border-b border-gray-100">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
@@ -49,7 +49,7 @@ export default function HomePage() {
               <FiActivity size={23} />
             </span>
             <span className="text-2xl font-bold tracking-tight">
-              Med<span className="text-blue-600">App</span>
+              Pulse<span className="text-blue-600">Path</span>
             </span>
           </Link>
 
@@ -71,7 +71,7 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-blue-50 to-white">
+      <section>
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 md:grid-cols-2 md:py-28 lg:px-8">
           <div>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-sm font-medium text-blue-700">
@@ -86,7 +86,7 @@ export default function HomePage() {
 
             <p className="mt-6 max-w-lg text-lg leading-8 text-gray-600">
               Manage appointments, coordinate healthcare teams, and keep
-              essential information organized with MedApp.
+              essential information organized with PulsePath.
             </p>
 
             <div className="mt-9 flex flex-wrap gap-4">
@@ -124,7 +124,9 @@ export default function HomePage() {
               <div className="flex items-center justify-between border-b border-gray-100 pb-5">
                 <div>
                   <p className="text-sm text-gray-500">Welcome to</p>
-                  <h2 className="mt-1 text-xl font-bold">MedApp Dashboard</h2>
+                  <h2 className="mt-1 text-xl font-bold">
+                    PulsePath Dashboard
+                  </h2>
                 </div>
                 <span className="rounded-xl bg-blue-50 p-3 text-blue-600">
                   <FiActivity size={24} />
@@ -179,7 +181,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
-              What MedApp offers
+              What PulsePath offers
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
               Everything organized in one place
@@ -217,7 +219,7 @@ export default function HomePage() {
 
           <div className="mt-14 rounded-2xl bg-blue-600 px-6 py-10 text-center text-white sm:px-12">
             <h2 className="text-2xl font-bold sm:text-3xl">
-              Ready to access MedApp?
+              Ready to access PulsePath?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-blue-100">
               Sign in to access your workspace and the features available to
@@ -238,10 +240,10 @@ export default function HomePage() {
       <footer className="border-t border-gray-100">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-6 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <Link href="/" className="font-semibold text-gray-800">
-            MedApp
+            PulsePath
           </Link>
           <p>Medical appointment management made simpler.</p>
-          <p>© {new Date().getFullYear()} MedApp</p>
+          <p>© {new Date().getFullYear()} PulsePath</p>
         </div>
       </footer>
     </main>

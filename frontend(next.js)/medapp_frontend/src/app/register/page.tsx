@@ -51,7 +51,7 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-white">Create Account</h1>
 
           <p className="text-blue-100 mt-2">
-            Register to access the MedApp platform.
+            Register to access the PulsePath platform.
           </p>
         </div>
 

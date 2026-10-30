@@ -1,10 +1,9 @@
 "use client";
 import { authService } from "@/services/auth.service";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiActivity, FiEye, FiEyeOff } from "react-icons/fi";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -62,7 +61,14 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gray-50 flex">
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-indigo-900 via-blue-700 to-blue-500 text-white p-16 flex-col justify-center">
         <div className="max-w-xl">
-          <Image src={"/logo.png"} alt={"MedApp"} height={16} width={16} className="mb-4"/>
+          <div className="mb-12 inline-flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-cyan-200">
+              <FiActivity size={26} />
+            </span>
+            <span className="text-2xl font-bold tracking-tight">
+              PulsePath
+            </span>
+          </div>
           <h1 className="text-5xl font-bold mb-6">Welcome Back</h1>
 
           <p className="text-blue-100 text-lg leading-8">
@@ -119,10 +125,18 @@ export default function ResetPasswordPage() {
       <div className="flex w-full lg:w-[500px] items-center justify-center p-8">
         <div className="w-full bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 p-8">
           <div className="mb-8">
+            <div className="mb-8 inline-flex items-center gap-3 lg:hidden">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-900 to-blue-500 text-white shadow-sm">
+                <FiActivity size={23} />
+              </span>
+              <span className="text-xl font-bold tracking-tight text-indigo-950">
+                PulsePath
+              </span>
+            </div>
             <h2 className="text-3xl font-bold text-gray-900">Reset Password</h2>
 
             <p className="text-gray-500 mt-2">
-              Set a new password for your MedApp account.
+              Set a new password for your PulsePath account.
             </p>
           </div>
 
